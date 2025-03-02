@@ -119,24 +119,13 @@ def after_insert(doc, method=None):
     fetch_discount(doc)
 
 def validate(doc, method=None):
-    if doc.is_new():
-        fetch_discount(doc)
-        fetch_previous_outstanding_amount(doc)
-
-def fetch_previous_outstanding_amount(doc):
-    if frappe.get_value("Company", doc.company, "enable_prevoius_amount"):
-        doc.custom_previous_outstanding_amount = get_outstanding_amount(
-            doc.debit_to, doc.customer
-        )
-        doc.custom_net_payable = (doc.rounded_total + doc.custom_previous_outstanding_amount) - doc.total_advance
-    else:
-        doc.custom_net_payable = doc.rounded_total - doc.total_advance
+    doc.custom_previous_outstanding_amount = get_outstanding_amount(
+        doc.debit_to, doc.customer
+    )
+    doc.custom_net_payable = (doc.rounded_total + doc.custom_previous_outstanding_amount) - doc.total_advance
 
 def fetch_discount(doc):
     if not doc.customer:
-        return
-    
-    if not frappe.get_value("Company", doc.company, "custom_enable_discount"):
         return
 
     dis_doc = frappe.get_all("Discount", filters={"customer": doc.customer}, pluck="name")
