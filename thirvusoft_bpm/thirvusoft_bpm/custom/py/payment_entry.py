@@ -226,7 +226,7 @@ def send_purchase_msg(doc):
 
 import frappe
 from frappe.utils.background_jobs import enqueue
-
+from frappe import _
 def send_payment_mail(doc, method=None):
     # Fetch Payment Gateway Account using the company
     payment_gateway_account = frappe.db.get_value(
@@ -257,12 +257,9 @@ def send_payment_mail(doc, method=None):
     if not recipients:
         return  # Exit if no valid emails found
 
-    # Get Subject and Message from Payment Gateway Account
-    raw_message = payment_gateway_account.get("confirmation_message") or "We acknowledge the receipt of {paid_amount} paid by you."
-    
-    # Replace placeholders in subject and message
-    subject = raw_message.replace("{{doc.paid_amount}}", str(doc.paid_amount))  
-    message = subject  # Since subject and message are the same in this case
+    # Set Subject and Message
+    subject = _("Thanks for Payment - Payment Entry {0}").format(doc.name)
+    message = _("We acknowledge the receipt of {0} paid by you.").format(doc.paid_amount)
 
     # ✅ Get Print Format ONLY from Company Doctype
     print_format = frappe.db.get_value("Company", doc.company, "custom_payment_print_format") or doc.meta.default_print_format or "Standard"
@@ -295,4 +292,5 @@ def send_payment_mail(doc, method=None):
         enqueue(method=frappe.sendmail, queue="short", timeout=300, is_async=True, **email_args)
     except Exception as e:
         frappe.log_error(f"Failed to send email for {doc.name}: {str(e)}", "send_payment_mail")
+
 

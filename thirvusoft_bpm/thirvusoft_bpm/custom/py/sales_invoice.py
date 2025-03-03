@@ -141,13 +141,13 @@ def fetch_previous_outstanding_amount(doc):
             doc.debit_to, doc.customer
         )
         # custom_net_payable = (doc.rounded_total + doc.custom_previous_outstanding_amount) - doc.total_advance
-        custom_net_payable = ((doc.custom_previous_outstanding_amount + doc.outstanding_amount) - doc.total_advance)
+        custom_net_payable = (doc.custom_previous_outstanding_amount + doc.outstanding_amount)
         doc.custom_net_payable = round_based_on_smallest_currency_fraction(
             custom_net_payable, doc.currency, doc.precision("custom_net_payable")
         )
     else:
         # custom_net_payable = doc.rounded_total - doc.total_advance
-        custom_net_payable = doc.outstanding_amount - doc.total_advance
+        custom_net_payable = doc.outstanding_amount 
         doc.custom_net_payable = round_based_on_smallest_currency_fraction(
             custom_net_payable, doc.currency, doc.precision("custom_net_payable")
         )
