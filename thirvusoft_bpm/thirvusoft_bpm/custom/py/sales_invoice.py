@@ -1,6 +1,7 @@
 import frappe
 import json
-from frappe.utils import flt, cint
+from frappe.utils import flt, cint, round_based_on_smallest_currency_fraction
+
 from erpnext.controllers.accounts_controller import (
     get_advance_journal_entries,
     get_advance_payment_entries_for_regional,
@@ -121,16 +122,35 @@ def after_insert(doc, method=None):
 def validate(doc, method=None):
     if doc.is_new():
         fetch_discount(doc)
-        fetch_previous_outstanding_amount(doc)
+    fetch_previous_outstanding_amount(doc)
+    fetch_guardian_email(doc)
+
+def fetch_guardian_email(doc):
+    values = guardian_emails(doc.student)
+    doc.student_email = values.get("concatenated_emails")
+    doc.program_enrollment = values.get("program_enrollment")
+    doc.program = values.get("program")
 
 def fetch_previous_outstanding_amount(doc):
+    if not doc.is_new():
+        if doc.outstanding_amount == frappe.db.get_value("Sales Invoice", doc.name, "outstanding_amount"):
+            return
+
     if frappe.get_value("Company", doc.company, "enable_prevoius_amount"):
         doc.custom_previous_outstanding_amount = get_outstanding_amount(
             doc.debit_to, doc.customer
         )
-        doc.custom_net_payable = (doc.rounded_total + doc.custom_previous_outstanding_amount) - doc.total_advance
+        # custom_net_payable = (doc.rounded_total + doc.custom_previous_outstanding_amount) - doc.total_advance
+        custom_net_payable = ((doc.custom_previous_outstanding_amount + doc.outstanding_amount) - doc.total_advance)
+        doc.custom_net_payable = round_based_on_smallest_currency_fraction(
+            custom_net_payable, doc.currency, doc.precision("custom_net_payable")
+        )
     else:
-        doc.custom_net_payable = doc.rounded_total - doc.total_advance
+        # custom_net_payable = doc.rounded_total - doc.total_advance
+        custom_net_payable = doc.outstanding_amount - doc.total_advance
+        doc.custom_net_payable = round_based_on_smallest_currency_fraction(
+            custom_net_payable, doc.currency, doc.precision("custom_net_payable")
+        )
 
 def fetch_discount(doc):
     if not doc.customer:
