@@ -123,8 +123,10 @@ def create_payment_request(list_of_docs=None):
         charges_applicable = frappe.db.get_value('Company', company, 'charges_applicable')
         razorpay_charges = frappe.db.get_value('Company', company, 'razorpay_charges')
 
-        grand_total = invoice_doc.outstanding_amount
+        # Use `custom_net_payable` directly
+        grand_total = flt(invoice_doc.custom_net_payable)
 
+        # Apply charges only if amount is positive
         if grand_total > 0 and charges_applicable and not invoice_doc.get("without_charges"):
             invoice_doc.without_charges = grand_total  # Store original amount
             grand_total = (grand_total * (razorpay_charges / 100)) + grand_total
@@ -144,19 +146,21 @@ def create_payment_request(list_of_docs=None):
 
         doc = frappe.get_doc("Payment Request", pr_doc.name)
         doc.mode_of_payment = 'Gateway'
-        doc.payment_request_type = 'Inward'
+        doc.payment_request_type = 'Inward' if grand_total >= 0 else 'Outward'  # Outward for refunds
         doc.print_format = frappe.db.get_value(
             "Property Setter",
             dict(property="default_print_format", doc_type="Sales Invoice"),
             "value",
         )
 
-        # Get Previous Outstanding Amount
-        previous_outstanding_amount = get_outstanding_amount(
-            invoice_doc.debit_to, invoice_doc.customer
-        )
+        # Use exact custom_net_payable as grand_total
+        doc.grand_total = grand_total
 
-        doc.grand_total = grand_total  # Use modified grand total with charges
+        # Set appropriate message
+        if grand_total <= 0:
+            non_payment_message = frappe.db.get_value('Payment Gateway Account', doc.payment_gateway_account, 'non_payment_message')
+            doc.message = non_payment_message or "No payment required at this time."
+
         doc.save(ignore_permissions=True)
 
         frappe.db.set_value(
@@ -231,12 +235,32 @@ def fetch_previous_outstanding_amount(doc):
             custom_net_payable, doc.currency, doc.precision("custom_net_payable")
         )
 
+# def update_custom_net_payable(doc, method):
+#     # Get the latest outstanding amount after submission
+#     latest_outstanding = frappe.db.get_value("Sales Invoice", doc.name, "outstanding_amount")
+
+#     if frappe.get_value("Company", doc.company, "enable_prevoius_amount"):
+#         doc.custom_previous_outstanding_amount = get_outstanding_amount(doc.debit_to, doc.customer)
+#         doc.custom_net_payable = round_based_on_smallest_currency_fraction(
+#             doc.custom_previous_outstanding_amount + latest_outstanding,
+#             doc.currency, doc.precision("custom_net_payable")
+#         )
+#     else:
+#         doc.custom_net_payable = round_based_on_smallest_currency_fraction(
+#             latest_outstanding,
+#             doc.currency, doc.precision("custom_net_payable")
+#         )
+
+#     doc.db_update()  # Save the updated custom_net_payable value
+
 def update_custom_net_payable(doc, method):
-    # Get the latest outstanding amount after submission
     latest_outstanding = frappe.db.get_value("Sales Invoice", doc.name, "outstanding_amount")
 
     if frappe.get_value("Company", doc.company, "enable_prevoius_amount"):
-        doc.custom_previous_outstanding_amount = get_outstanding_amount(doc.debit_to, doc.customer)
+        # Ensure previous outstanding remains static (only set once)
+        if not doc.custom_previous_outstanding_amount:
+            doc.custom_previous_outstanding_amount = get_outstanding_amount(doc.debit_to, doc.customer)
+
         doc.custom_net_payable = round_based_on_smallest_currency_fraction(
             doc.custom_previous_outstanding_amount + latest_outstanding,
             doc.currency, doc.precision("custom_net_payable")
@@ -248,6 +272,7 @@ def update_custom_net_payable(doc, method):
         )
 
     doc.db_update()  # Save the updated custom_net_payable value
+
 
 def fetch_discount(doc):
     if not doc.customer:
@@ -334,4 +359,3 @@ def get_advance_entries(self, accounts):
     )
 
     return journal_entries + payment_entries
-

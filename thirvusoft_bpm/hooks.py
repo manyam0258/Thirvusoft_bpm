@@ -126,11 +126,14 @@ doc_events = {
     "Journal Entry": {
 		"on_submit": "thirvusoft_bpm.thirvusoft_bpm.custom.py.journal_entry.update_fees",
 		"on_cancel": "thirvusoft_bpm.thirvusoft_bpm.custom.py.journal_entry.update_fees",
+        "on_submit": "thirvusoft_bpm.thirvusoft_bpm.custom.py.journal_entry.update_sales_invoice_allocated_amount"
+
 
 	},
     "Payment Entry": {
 		"on_submit": "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.on_submit",
 		"validate":"thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.update_letter_head"
+        
 
 	},
 	"Purchase Order": {
@@ -146,6 +149,8 @@ doc_events = {
     "Sales Invoice": {
         # "after_insert": "thirvusoft_bpm.thirvusoft_bpm.custom.py.sales_invoice.after_insert",
         "validate": "thirvusoft_bpm.thirvusoft_bpm.custom.py.sales_invoice.validate",
+        "on_change": "thirvusoft_bpm.thirvusoft_bpm.custom.py.sales_invoice.update_custom_net_payable"
+        
 	},
     "Integration Request": {
 		"validate": "thirvusoft_bpm.thirvusoft_bpm.custom.py.integration_request.update_expiry_date",
