@@ -24,6 +24,71 @@ def update_advance(list_of_docs, accounts):
         set_advances(doc, accounts)
         doc.save()
 
+# def create_payment_request(list_of_docs=None):
+#     if not list_of_docs:
+#         return False
+
+#     update_dict = {}
+
+#     # Create Bulk Transaction Log
+#     new_transaction = frappe.new_doc('Bulk Transaction Log')
+#     for invoice in list_of_docs:
+#         customer = frappe.db.get_value("Sales Invoice", invoice, "customer")
+#         student = frappe.db.get_value("Student", {"customer": customer}, "name")
+        
+#         new_transaction.append('bulk_transaction_log_table', {
+#             'reference_doctype': "Sales Invoice",
+#             'reference_name': invoice,
+#             'student': student,
+#             'status': "Pending"
+#         })
+
+#     new_transaction.save()
+    
+#     update_dict = {invoice: new_transaction.name for invoice in list_of_docs}
+
+#     # Process Each Invoice
+#     for invoice in list_of_docs:
+#         invoice_doc = frappe.get_doc("Sales Invoice", invoice)
+#         if not (invoice_doc.name and invoice_doc.student_email and invoice_doc.customer):
+#             continue
+        
+#         pr_doc = custom_make_payment_request(
+#             dt="Sales Invoice",
+#             dn=invoice_doc.name,
+#             party_type="Customer",
+#             party=invoice_doc.customer,
+#             recipient_id=invoice_doc.student_email
+#         )
+
+#         if not pr_doc:
+#             continue
+
+#         doc = frappe.get_doc("Payment Request", pr_doc.name)
+#         doc.mode_of_payment = 'Gateway'
+#         doc.payment_request_type = 'Inward'
+#         doc.print_format = frappe.db.get_value(
+#             "Property Setter",
+#             dict(property="default_print_format", doc_type="Sales Invoice"),
+#             "value",
+#         )
+
+#         # Get Previous Outstanding Amount
+#         previous_outstanding_amount = get_outstanding_amount(
+#             invoice_doc.debit_to, invoice_doc.customer
+#         )
+
+#         doc.grand_total = invoice_doc.outstanding_amount
+#         doc.save(ignore_permissions=True)
+
+#         frappe.db.set_value(
+#             'Bulk Transaction Log Table',
+#             {'parent': update_dict[invoice], 'reference_doctype': 'Sales Invoice', 'reference_name': invoice},
+#             'status', 'Completed'
+#         )
+
+#     return True
+
 def create_payment_request(list_of_docs=None):
     if not list_of_docs:
         return False
@@ -53,6 +118,19 @@ def create_payment_request(list_of_docs=None):
         if not (invoice_doc.name and invoice_doc.student_email and invoice_doc.customer):
             continue
         
+        # Fetch Razorpay Charges
+        company = invoice_doc.company
+        charges_applicable = frappe.db.get_value('Company', company, 'charges_applicable')
+        razorpay_charges = frappe.db.get_value('Company', company, 'razorpay_charges')
+
+        grand_total = invoice_doc.outstanding_amount
+
+        if grand_total > 0 and charges_applicable and not invoice_doc.get("without_charges"):
+            invoice_doc.without_charges = grand_total  # Store original amount
+            grand_total = (grand_total * (razorpay_charges / 100)) + grand_total
+        elif grand_total > 0 and not charges_applicable and invoice_doc.get("without_charges"):
+            grand_total = invoice_doc.without_charges  # Restore original amount if charges are disabled
+
         pr_doc = custom_make_payment_request(
             dt="Sales Invoice",
             dn=invoice_doc.name,
@@ -78,7 +156,7 @@ def create_payment_request(list_of_docs=None):
             invoice_doc.debit_to, invoice_doc.customer
         )
 
-        doc.grand_total = invoice_doc.outstanding_amount
+        doc.grand_total = grand_total  # Use modified grand total with charges
         doc.save(ignore_permissions=True)
 
         frappe.db.set_value(
@@ -88,6 +166,7 @@ def create_payment_request(list_of_docs=None):
         )
 
     return True
+
 
 @frappe.whitelist(allow_guest=True)
 def guardian_emails(student):
@@ -122,8 +201,8 @@ def after_insert(doc, method=None):
 def validate(doc, method=None):
     if doc.is_new():
         fetch_discount(doc)
-    fetch_previous_outstanding_amount(doc)
     fetch_guardian_email(doc)
+    fetch_previous_outstanding_amount(doc)
 
 def fetch_guardian_email(doc):
     values = guardian_emails(doc.student)
@@ -147,10 +226,28 @@ def fetch_previous_outstanding_amount(doc):
         )
     else:
         # custom_net_payable = doc.rounded_total - doc.total_advance
-        custom_net_payable = doc.outstanding_amount 
+        custom_net_payable = doc.outstanding_amount
         doc.custom_net_payable = round_based_on_smallest_currency_fraction(
             custom_net_payable, doc.currency, doc.precision("custom_net_payable")
         )
+
+def update_custom_net_payable(doc, method):
+    # Get the latest outstanding amount after submission
+    latest_outstanding = frappe.db.get_value("Sales Invoice", doc.name, "outstanding_amount")
+
+    if frappe.get_value("Company", doc.company, "enable_prevoius_amount"):
+        doc.custom_previous_outstanding_amount = get_outstanding_amount(doc.debit_to, doc.customer)
+        doc.custom_net_payable = round_based_on_smallest_currency_fraction(
+            doc.custom_previous_outstanding_amount + latest_outstanding,
+            doc.currency, doc.precision("custom_net_payable")
+        )
+    else:
+        doc.custom_net_payable = round_based_on_smallest_currency_fraction(
+            latest_outstanding,
+            doc.currency, doc.precision("custom_net_payable")
+        )
+
+    doc.db_update()  # Save the updated custom_net_payable value
 
 def fetch_discount(doc):
     if not doc.customer:
