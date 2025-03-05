@@ -189,8 +189,13 @@ doc_events = {
 #
 override_whitelisted_methods = {
 	# "frappe.desk.doctype.event.event.get_events": "thirvusoft_bpm.event.get_events"
-	"erpnext.accounts.doctype.payment_request.payment_request.make_payment_request" : "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_request.custom_make_payment_request"
+	"erpnext.accounts.doctype.payment_request.payment_request.make_payment_request" : "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_request.custom_make_payment_request",
+    "education.education.doctype.fee_schedule.fee_schedule.get_fee_structure": "thirvusoft_bpm.thirvusoft_bpm.custom.py.fee_schedule.get_fee_structure",
+    "education.education.doctype.fee_structure.fee_structure.make_fee_schedule": "thirvusoft_bpm.thirvusoft_bpm.custom.py.fee_structure.make_fee_schedule"
 }
+
+
+
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
@@ -245,3 +250,6 @@ fixtures = [
 app_include_js = [
     "/assets/thirvusoft_bpm/js/razorpay_checkout.js"
 ]
+
+
+
