@@ -243,7 +243,6 @@ user_data_fields = [
 fixtures = [
     {
         "doctype": "Server Script",
-        "filters": [["name", "=", "Payment Entry Automation"]]  # Export only this script
     }
 ]
 

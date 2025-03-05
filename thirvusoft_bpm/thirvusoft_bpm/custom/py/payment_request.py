@@ -91,12 +91,38 @@ class CustomPaymentRequest(PaymentRequest):
         print("email_args",email_args)
         enqueue(method=frappe.sendmail, queue="short", timeout=300, is_async=True, **email_args)
 
+    # def set_gateway_account(self):
+    #     company = frappe.db.get_value(self.reference_doctype,self.reference_name,"company")
+    #     payment_gateway_aacount , payment_account , message = frappe.db.get_value("Payment Gateway Account",{"company":company},["name","payment_account","message"])
+    #     self.payment_gateway_account = payment_gateway_aacount
+    #     self.payment_account = payment_account 
+    #     self.message = message
     def set_gateway_account(self):
-        company = frappe.db.get_value(self.reference_doctype,self.reference_name,"company")
-        payment_gateway_aacount , payment_account , message = frappe.db.get_value("Payment Gateway Account",{"company":company},["name","payment_account","message"])
-        self.payment_gateway_account = payment_gateway_aacount
-        self.payment_account = payment_account 
-        self.message = message
+        # frappe.msgprint(_("Reference Doctype: {0}, Reference Name: {1}").format(self.reference_doctype, self.reference_name))
+
+        company = frappe.db.get_value(self.reference_doctype, self.reference_name, "company")
+        # frappe.msgprint(_("Fetched Company: {0}").format(company))
+
+        if not company:
+            frappe.throw(_("Company not found for {0}: {1}").format(self.reference_doctype, self.reference_name))
+
+        payment_gateway_account, payment_account, message = frappe.db.get_value(
+            "Payment Gateway Account",
+            {"company": company, "is_default": 1},  
+            ["name", "payment_account", "message"]
+        )
+
+        # frappe.msgprint(_("Payment Gateway Account: {0}, Payment Account: {1}").format(payment_gateway_account, payment_account))
+
+        if not payment_gateway_account:
+            frappe.throw(_("No Payment Gateway Account found for company {0}").format(company))
+
+        self.company = company  # Explicitly setting company
+        self.payment_gateway_account = payment_gateway_account
+        self.payment_account = payment_account
+        self.message = message or ""
+
+
     def validate_payment_request_amount(self):
         existing_payment_request_amount = flt(
             get_existing_payment_request_amount(self.reference_doctype, self.reference_name)
