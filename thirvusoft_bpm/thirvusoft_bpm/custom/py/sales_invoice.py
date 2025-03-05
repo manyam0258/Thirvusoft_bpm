@@ -146,7 +146,7 @@ def create_payment_request(list_of_docs=None):
 
         doc = frappe.get_doc("Payment Request", pr_doc.name)
         doc.mode_of_payment = 'Gateway'
-        doc.payment_request_type = 'Inward' if grand_total >= 0 else 'Outward'  # Outward for refunds
+        doc.payment_request_type = 'Inward' 
         doc.print_format = frappe.db.get_value(
             "Property Setter",
             dict(property="default_print_format", doc_type="Sales Invoice"),
