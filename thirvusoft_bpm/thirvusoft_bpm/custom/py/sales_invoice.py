@@ -209,10 +209,11 @@ def validate(doc, method=None):
     fetch_previous_outstanding_amount(doc)
 
 def fetch_guardian_email(doc):
-    values = guardian_emails(doc.student)
-    doc.student_email = values.get("concatenated_emails")
-    doc.program_enrollment = values.get("program_enrollment")
-    doc.program = values.get("program")
+    if doc.is_new():  # Only set values when the document is create
+        values = guardian_emails(doc.student)
+        doc.student_email = values.get("concatenated_emails")
+        doc.program_enrollment = values.get("program_enrollment")
+        doc.program = values.get("program")
 
 def fetch_previous_outstanding_amount(doc):
     if not doc.is_new():
@@ -253,16 +254,26 @@ def fetch_previous_outstanding_amount(doc):
 
 #     doc.db_update()  # Save the updated custom_net_payable value
 
+def before_insert(doc, method):
+    """Set previous outstanding amount only at the time of creation."""
+    if frappe.get_value("Company", doc.company, "enable_prevoius_amount"):
+        doc.custom_previous_outstanding_amount = get_outstanding_amount(doc.debit_to, doc.customer)
+    else:
+        doc.custom_previous_outstanding_amount = 0
+
 def update_custom_net_payable(doc, method):
+    """Ensure the net payable calculation does not modify the previous outstanding amount on submission."""
     latest_outstanding = frappe.db.get_value("Sales Invoice", doc.name, "outstanding_amount")
 
     if frappe.get_value("Company", doc.company, "enable_prevoius_amount"):
-        # Ensure previous outstanding remains static (only set once)
-        if not doc.custom_previous_outstanding_amount:
-            doc.custom_previous_outstanding_amount = get_outstanding_amount(doc.debit_to, doc.customer)
+        # Fetch the previously stored value instead of recalculating
+        previous_outstanding = frappe.db.get_value("Sales Invoice", doc.name, "custom_previous_outstanding_amount")
+        
+        if previous_outstanding is None:
+            previous_outstanding = 0  # Fallback if not set
 
         doc.custom_net_payable = round_based_on_smallest_currency_fraction(
-            doc.custom_previous_outstanding_amount + latest_outstanding,
+            previous_outstanding + latest_outstanding,
             doc.currency, doc.precision("custom_net_payable")
         )
     else:
