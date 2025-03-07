@@ -126,11 +126,14 @@ doc_events = {
     "Journal Entry": {
 		"on_submit": "thirvusoft_bpm.thirvusoft_bpm.custom.py.journal_entry.update_fees",
 		"on_cancel": "thirvusoft_bpm.thirvusoft_bpm.custom.py.journal_entry.update_fees",
+        "on_submit": "thirvusoft_bpm.thirvusoft_bpm.custom.py.journal_entry.update_sales_invoice_allocated_amount"
+
 
 	},
     "Payment Entry": {
 		"on_submit": "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.on_submit",
 		"validate":"thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.update_letter_head"
+        
 
 	},
 	"Purchase Order": {
@@ -146,6 +149,8 @@ doc_events = {
     "Sales Invoice": {
         # "after_insert": "thirvusoft_bpm.thirvusoft_bpm.custom.py.sales_invoice.after_insert",
         "validate": "thirvusoft_bpm.thirvusoft_bpm.custom.py.sales_invoice.validate",
+        "on_change": "thirvusoft_bpm.thirvusoft_bpm.custom.py.sales_invoice.update_custom_net_payable"
+        
 	},
     "Integration Request": {
 		"validate": "thirvusoft_bpm.thirvusoft_bpm.custom.py.integration_request.update_expiry_date",
@@ -184,8 +189,13 @@ doc_events = {
 #
 override_whitelisted_methods = {
 	# "frappe.desk.doctype.event.event.get_events": "thirvusoft_bpm.event.get_events"
-	"erpnext.accounts.doctype.payment_request.payment_request.make_payment_request" : "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_request.custom_make_payment_request"
+	"erpnext.accounts.doctype.payment_request.payment_request.make_payment_request" : "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_request.custom_make_payment_request",
+    "education.education.doctype.fee_schedule.fee_schedule.get_fee_structure": "thirvusoft_bpm.thirvusoft_bpm.custom.py.fee_schedule.get_fee_structure",
+    "education.education.doctype.fee_structure.fee_structure.make_fee_schedule": "thirvusoft_bpm.thirvusoft_bpm.custom.py.fee_structure.make_fee_schedule"
 }
+
+
+
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
@@ -233,10 +243,12 @@ user_data_fields = [
 fixtures = [
     {
         "doctype": "Server Script",
-        "filters": [["name", "=", "Payment Entry Automation"]]  # Export only this script
     }
 ]
 
 app_include_js = [
     "/assets/thirvusoft_bpm/js/razorpay_checkout.js"
 ]
+
+
+

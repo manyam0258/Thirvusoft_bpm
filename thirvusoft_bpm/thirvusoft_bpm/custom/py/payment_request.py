@@ -91,12 +91,38 @@ class CustomPaymentRequest(PaymentRequest):
         print("email_args",email_args)
         enqueue(method=frappe.sendmail, queue="short", timeout=300, is_async=True, **email_args)
 
+    # def set_gateway_account(self):
+    #     company = frappe.db.get_value(self.reference_doctype,self.reference_name,"company")
+    #     payment_gateway_aacount , payment_account , message = frappe.db.get_value("Payment Gateway Account",{"company":company},["name","payment_account","message"])
+    #     self.payment_gateway_account = payment_gateway_aacount
+    #     self.payment_account = payment_account 
+    #     self.message = message
     def set_gateway_account(self):
-        company = frappe.db.get_value(self.reference_doctype,self.reference_name,"company")
-        payment_gateway_aacount , payment_account , message = frappe.db.get_value("Payment Gateway Account",{"company":company},["name","payment_account","message"])
-        self.payment_gateway_account = payment_gateway_aacount
-        self.payment_account = payment_account 
-        self.message = message
+        # frappe.msgprint(_("Reference Doctype: {0}, Reference Name: {1}").format(self.reference_doctype, self.reference_name))
+
+        company = frappe.db.get_value(self.reference_doctype, self.reference_name, "company")
+        # frappe.msgprint(_("Fetched Company: {0}").format(company))
+
+        if not company:
+            frappe.throw(_("Company not found for {0}: {1}").format(self.reference_doctype, self.reference_name))
+
+        payment_gateway_account, payment_account, message = frappe.db.get_value(
+            "Payment Gateway Account",
+            {"company": company, "is_default": 1},  
+            ["name", "payment_account", "message"]
+        )
+
+        # frappe.msgprint(_("Payment Gateway Account: {0}, Payment Account: {1}").format(payment_gateway_account, payment_account))
+
+        if not payment_gateway_account:
+            frappe.throw(_("No Payment Gateway Account found for company {0}").format(company))
+
+        self.company = company  # Explicitly setting company
+        self.payment_gateway_account = payment_gateway_account
+        self.payment_account = payment_account
+        self.message = message or ""
+
+
     def validate_payment_request_amount(self):
         existing_payment_request_amount = flt(
             get_existing_payment_request_amount(self.reference_doctype, self.reference_name)
@@ -261,33 +287,61 @@ def whatsapp_message(doc):
                     log_doc.insert()
                 frappe.delete_doc('File',pdf_url.name,ignore_permissions=True)
 
+# def custom_get_amount(ref_doc, payment_account=None):
+#     """get amount based on doctype"""
+#     dt = ref_doc.doctype
+#     if dt in ["Sales Order", "Purchase Order"]:
+#         grand_total = flt(ref_doc.rounded_total) or flt(ref_doc.grand_total)
+#     elif dt in ["Purchase Invoice"]:
+#         if not ref_doc.get("is_pos"):
+#             if ref_doc.party_account_currency == ref_doc.currency:
+#                 grand_total = flt(ref_doc.grand_total)
+#             else:
+#                 grand_total = flt(ref_doc.base_grand_total) / ref_doc.conversion_rate
+#         elif dt == "POS Invoice":
+#             for pay in ref_doc.payments:
+#                 if pay.type == "Phone" and pay.account == payment_account:
+#                     grand_total = pay.amount
+#                     break
+#     elif dt == "Fees":
+#         grand_total = ref_doc.outstanding_amount
+
+#     elif dt == "Sales Invoice":
+#         # grand_total = ref_doc.outstanding_amount
+#         return ref_doc.custom_net_payable
+
+#     if grand_total > 0:
+#         return grand_total
+#     else:
+#         frappe.throw(_("Payment Entry is already created"))
 def custom_get_amount(ref_doc, payment_account=None):
-    """get amount based on doctype"""
+    """Get amount based on doctype, ensuring custom_net_payable is used when applicable."""
     dt = ref_doc.doctype
-    if dt in ["Sales Order", "Purchase Order"]:
-        grand_total = flt(ref_doc.rounded_total) or flt(ref_doc.grand_total)
-    elif dt in ["Purchase Invoice"]:
+
+    if dt == "Sales Invoice":
+        custom_amount = flt(ref_doc.get("custom_net_payable", 0))
+        if custom_amount != 0:
+            return custom_amount  # Use custom_net_payable if it exists
+        return flt(ref_doc.get("outstanding_amount", 0))  # Default to outstanding amount
+
+    elif dt in ["Sales Order", "Purchase Order"]:
+        return flt(ref_doc.rounded_total) or flt(ref_doc.grand_total)
+
+    elif dt == "Purchase Invoice":
         if not ref_doc.get("is_pos"):
             if ref_doc.party_account_currency == ref_doc.currency:
-                grand_total = flt(ref_doc.grand_total)
-            else:
-                grand_total = flt(ref_doc.base_grand_total) / ref_doc.conversion_rate
+                return flt(ref_doc.grand_total)
+            return flt(ref_doc.base_grand_total) / ref_doc.conversion_rate
         elif dt == "POS Invoice":
             for pay in ref_doc.payments:
                 if pay.type == "Phone" and pay.account == payment_account:
-                    grand_total = pay.amount
-                    break
+                    return pay.amount
+
     elif dt == "Fees":
-        grand_total = ref_doc.outstanding_amount
+        return flt(ref_doc.outstanding_amount)
 
-    elif dt == "Sales Invoice":
-        # grand_total = ref_doc.outstanding_amount
-        return ref_doc.custom_net_payable
+    frappe.throw(_("Payment Entry is already created or no payable amount available"))
 
-    if grand_total > 0:
-        return grand_total
-    else:
-        frappe.throw(_("Payment Entry is already created"))
 
 @frappe.whitelist(allow_guest=True)
 def custom_make_payment_request(**args):
