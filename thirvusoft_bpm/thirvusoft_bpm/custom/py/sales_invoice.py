@@ -209,7 +209,7 @@ def validate(doc, method=None):
     fetch_previous_outstanding_amount(doc)
 
 def fetch_guardian_email(doc):
-    if doc.is_new():  # Only set values when the document is created
+    if doc.is_new():  # Only set values when the document is create
         values = guardian_emails(doc.student)
         doc.student_email = values.get("concatenated_emails")
         doc.program_enrollment = values.get("program_enrollment")
