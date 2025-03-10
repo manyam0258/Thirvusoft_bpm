@@ -214,7 +214,7 @@ def fetch_guardian_email(doc):
         doc.student_email = values.get("concatenated_emails")
         doc.program_enrollment = values.get("program_enrollment")
         doc.program = values.get("program")
-
+"""
 def fetch_previous_outstanding_amount(doc):
     if not doc.is_new():
         if doc.outstanding_amount == frappe.db.get_value("Sales Invoice", doc.name, "outstanding_amount"):
@@ -235,6 +235,34 @@ def fetch_previous_outstanding_amount(doc):
         doc.custom_net_payable = round_based_on_smallest_currency_fraction(
             custom_net_payable, doc.currency, doc.precision("custom_net_payable")
         )
+"""
+# Chatgpt fix
+def fetch_previous_outstanding_amount(doc):
+    if not doc.is_new():
+        # Ensure previous outstanding amount is not updated after creation
+        existing_previous_outstanding = frappe.db.get_value("Sales Invoice", doc.name, "custom_previous_outstanding_amount")
+        
+        if existing_previous_outstanding is not None:
+            doc.custom_previous_outstanding_amount = existing_previous_outstanding
+            return  # Prevent recalculation
+
+    # Only fetch outstanding balance during creation
+    if frappe.get_value("Company", doc.company, "enable_prevoius_amount"):
+        doc.custom_previous_outstanding_amount = get_outstanding_amount(
+            doc.debit_to, doc.customer
+        )
+        doc.custom_net_payable = round_based_on_smallest_currency_fraction(
+            doc.custom_previous_outstanding_amount + doc.outstanding_amount,
+            doc.currency, doc.precision("custom_net_payable")
+        )
+    else:
+        doc.custom_previous_outstanding_amount = 0
+        doc.custom_net_payable = round_based_on_smallest_currency_fraction(
+            doc.outstanding_amount,
+            doc.currency, doc.precision("custom_net_payable")
+        )
+
+
 
 # def update_custom_net_payable(doc, method):
 #     # Get the latest outstanding amount after submission
