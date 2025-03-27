@@ -224,9 +224,80 @@ def send_purchase_msg(doc):
 
 
 
+# import frappe
+# from frappe.utils.background_jobs import enqueue
+# from frappe import _
+# def send_payment_mail(doc, method=None):
+#     # Fetch Payment Gateway Account using the company
+#     payment_gateway_account = frappe.db.get_value(
+#         "Payment Gateway Account",
+#         {"company": doc.company},
+#         ["name", "confirmation_message"],
+#         as_dict=True
+#     )
+
+#     if not payment_gateway_account:
+#         frappe.log_error(f"Payment Gateway Account not found for company {doc.company}", "send_payment_mail")
+#         return  # Exit if no gateway settings exist
+
+#     # Fetch Email Recipients
+#     student_email = frappe.get_value("Student", doc.party, "student_email_id")
+#     guardian_emails = frappe.db.sql("""
+#         SELECT g.email_address as guardian_email 
+#         FROM `tabStudent Guardian` sg
+#         JOIN `tabGuardian` g ON sg.guardian = g.name
+#         WHERE sg.parent = %s
+#         GROUP BY g.name
+#     """, (doc.party,), as_dict=True)
+
+#     guardian_email_list = [entry["guardian_email"] for entry in guardian_emails if entry["guardian_email"]]
+
+#     # Prepare email recipients
+#     recipients = guardian_email_list if guardian_email_list else []
+#     if not recipients:
+#         return  # Exit if no valid emails found
+
+#     # Set Subject and Message
+#     subject = _("Thanks for Payment - Payment Entry {0}").format(doc.name)
+#     message = _("We acknowledge the receipt of {0} paid by you.").format(doc.paid_amount)
+
+#     # ✅ Get Print Format ONLY from Company Doctype
+#     print_format = frappe.db.get_value("Company", doc.company, "custom_payment_print_format") or doc.meta.default_print_format or "Standard"
+
+#     try:
+#         attachments = [
+#             frappe.attach_print(
+#                 doc.doctype,
+#                 doc.name,
+#                 doc=doc,
+#                 print_format=print_format,
+#                 letterhead=doc.letter_head or None
+#             )
+#         ]
+#     except Exception as e:
+#         frappe.log_error(f"Failed to generate attachment for {doc.name}: {str(e)}", "send_payment_mail")
+#         attachments = []
+
+#     email_args = {
+#         "recipients": recipients,
+#         "sender": None,
+#         "subject": subject,
+#         "message": message,
+#         "now": True,
+#         "attachments": attachments,
+#     }
+
+#     # Enqueue email sending
+#     try:
+#         enqueue(method=frappe.sendmail, queue="short", timeout=300, is_async=True, **email_args)
+#     except Exception as e:
+#         frappe.log_error(f"Failed to send email for {doc.name}: {str(e)}", "send_payment_mail")
+
+
 import frappe
 from frappe.utils.background_jobs import enqueue
 from frappe import _
+
 def send_payment_mail(doc, method=None):
     # Fetch Payment Gateway Account using the company
     payment_gateway_account = frappe.db.get_value(
@@ -257,6 +328,10 @@ def send_payment_mail(doc, method=None):
     if not recipients:
         return  # Exit if no valid emails found
 
+    # ✅ Add BCC email from Company
+    bcc_email = frappe.db.get_value("Company", doc.company, "default_email")
+    bcc_list = [bcc_email] if bcc_email else []
+
     # Set Subject and Message
     subject = _("Thanks for Payment - Payment Entry {0}").format(doc.name)
     message = _("We acknowledge the receipt of {0} paid by you.").format(doc.paid_amount)
@@ -278,8 +353,10 @@ def send_payment_mail(doc, method=None):
         frappe.log_error(f"Failed to generate attachment for {doc.name}: {str(e)}", "send_payment_mail")
         attachments = []
 
+    # ✅ Include BCC in email arguments
     email_args = {
         "recipients": recipients,
+        "bcc": bcc_list,  # Add BCC
         "sender": None,
         "subject": subject,
         "message": message,
@@ -292,5 +369,3 @@ def send_payment_mail(doc, method=None):
         enqueue(method=frappe.sendmail, queue="short", timeout=300, is_async=True, **email_args)
     except Exception as e:
         frappe.log_error(f"Failed to send email for {doc.name}: {str(e)}", "send_payment_mail")
-
-
