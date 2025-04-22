@@ -251,4 +251,8 @@ app_include_js = [
 ]
 
 
+override_doctype_class = {
+    "Payment Entry": "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.CustomPaymentEntry"
+}
+
 

@@ -11,6 +11,28 @@ from frappe.utils.background_jobs import enqueue
 from erpnext.accounts.doctype.payment_entry.payment_entry import PaymentEntry
 from hrms.overrides.employee_payment_entry import EmployeePaymentEntry
 
+from erpnext.accounts.party import get_party_account
+
+from erpnext.accounts.party import get_party_advance_account
+import frappe
+from erpnext.accounts.doctype.payment_request.payment_request import PaymentRequest
+from bs4 import BeautifulSoup
+import re
+from urllib.parse import quote
+import requests
+from frappe.utils.file_manager import save_file
+from frappe.utils.pdf import get_pdf
+from frappe.utils.background_jobs import enqueue
+from erpnext.accounts.doctype.payment_entry.payment_entry import PaymentEntry
+from hrms.overrides.employee_payment_entry import EmployeePaymentEntry
+from erpnext.accounts.party import get_party_account, get_party_advance_account
+from erpnext.accounts.doctype.payment_entry.payment_entry import PaymentEntry as ERPNextPaymentEntry
+
+
+
+
+
+
 class CustomPayment(EmployeePaymentEntry):
     def validate_transaction_reference(self):
         bank_account = self.paid_to if self.payment_type == "Receive" else self.paid_from
@@ -19,6 +41,83 @@ class CustomPayment(EmployeePaymentEntry):
         # if bank_account_type == "Bank":
         # 	if not self.reference_no or not self.reference_date:
         # 		frappe.throw(_("Reference No and Reference Date is mandatory for Bank transaction"))
+    
+def set_liability_account(self):
+	# Auto setting liability account should only be done during 'draft' status
+	if self.docstatus > 0 or self.payment_type == "Internal Transfer":
+		return
+
+	self.book_advance_payments_in_separate_party_account = False
+
+	if self.party_type not in ("Customer", "Supplier"):
+		self.is_opening = "No"
+		return
+
+	# Only apply logic if Customer Group is 'Student'
+	if self.party_type == "Customer":
+		customer_group = frappe.db.get_value("Customer", self.party, "customer_group")
+		if customer_group != "Student":
+			self.is_opening = "No"
+			return
+
+	# Company setting check
+	if not frappe.db.get_value(
+		"Company", self.company, "book_advance_payments_in_separate_party_account"
+	):
+		self.is_opening = "No"
+		return
+
+	# Important to set this flag for the gl building logic to work properly
+	self.book_advance_payments_in_separate_party_account = True
+
+	account_type = frappe.get_value(
+		"Account", {"name": self.party_account, "company": self.company}, "account_type"
+	)
+
+	if (account_type == "Payable" and self.party_type == "Customer") or (
+		account_type == "Receivable" and self.party_type == "Supplier"
+	):
+		self.is_opening = "No"
+		return
+
+	if self.references:
+		allowed_types = frozenset(["Sales Order", "Purchase Order"])
+		reference_types = set([x.reference_doctype for x in self.references])
+
+		# If there are references other than `allowed_types`, treat this as a normal payment entry
+		if reference_types - allowed_types:
+			self.book_advance_payments_in_separate_party_account = False
+			self.is_opening = "No"
+			return
+
+	accounts = get_party_account(self.party_type, self.party, self.company, include_advance=True)
+
+	liability_account = accounts[1] if len(accounts) > 1 else None
+	fieldname = (
+		"default_advance_received_account"
+		if self.party_type == "Customer"
+		else "default_advance_paid_account"
+	)
+
+	if not liability_account:
+		throw(
+			_("Please set default {0} in Company {1}").format(
+				frappe.bold(frappe.get_meta("Company").get_label(fieldname)), frappe.bold(self.company)
+			)
+		)
+
+	self.set(self.party_account_field, liability_account)
+
+	frappe.msgprint(
+		_(
+			"Book Advance Payments as Liability option is chosen. Paid From account changed from {0} to {1}."
+		).format(
+			frappe.bold(self.party_account),
+			frappe.bold(liability_account),
+		),
+		alert=True,
+	)
+
 
 def update_letter_head(doc,event):
     doc.letter_head = frappe.get_value('Payment Letter Head',{'parent':doc.company,'party_type':doc.party_type},'letter_head')
@@ -369,3 +468,93 @@ def send_payment_mail(doc, method=None):
         enqueue(method=frappe.sendmail, queue="short", timeout=300, is_async=True, **email_args)
     except Exception as e:
         frappe.log_error(f"Failed to send email for {doc.name}: {str(e)}", "send_payment_mail")
+
+
+import frappe
+from frappe import _
+from frappe.model.document import Document
+from erpnext.accounts.doctype.payment_entry.payment_entry import PaymentEntry as BasePaymentEntry
+from erpnext.accounts.doctype.payment_entry.payment_entry import get_party_account
+
+
+class CustomPaymentEntry(BasePaymentEntry):
+    def set_liability_account(self):
+        # Auto setting liability account should only be done during 'draft' status
+        if self.docstatus > 0 or self.payment_type == "Internal Transfer":
+            return
+
+        self.book_advance_payments_in_separate_party_account = False
+
+        if self.party_type not in ("Customer", "Supplier"):
+            self.is_opening = "No"
+            return
+
+        # Only apply logic if Customer Group is 'Student'
+        if self.party_type == "Customer":
+            customer_group = frappe.db.get_value("Customer", self.party, "customer_group")
+            if customer_group != "Student":
+                self.is_opening = "No"
+                return
+
+        # Company setting check
+        if not frappe.db.get_value(
+            "Company", self.company, "book_advance_payments_in_separate_party_account"
+        ):
+            self.is_opening = "No"
+            return
+
+        # Important to set this flag for the GL building logic to work properly
+        self.book_advance_payments_in_separate_party_account = True
+
+        account_type = frappe.get_value(
+            "Account", {"name": self.party_account, "company": self.company}, "account_type"
+        )
+
+        if (account_type == "Payable" and self.party_type == "Customer") or (
+            account_type == "Receivable" and self.party_type == "Supplier"
+        ):
+            self.is_opening = "No"
+            return
+
+        if self.references:
+            allowed_types = frozenset(["Sales Order", "Purchase Order"])
+            reference_types = set([x.reference_doctype for x in self.references])
+
+            # If there are references other than `allowed_types`, treat this as a normal payment entry
+            if reference_types - allowed_types:
+                self.book_advance_payments_in_separate_party_account = False
+                self.is_opening = "No"
+                return
+
+        accounts = get_party_account(self.party_type, self.party, self.company, include_advance=True)
+        liability_account = accounts[1] if len(accounts) > 1 else None
+
+        fieldname = (
+            "default_advance_received_account"
+            if self.party_type == "Customer"
+            else "default_advance_paid_account"
+        )
+
+        if not liability_account:
+            frappe.throw(
+                _("Please set default {0} in Company {1}").format(
+                    frappe.bold(frappe.get_meta("Company").get_label(fieldname)),
+                    frappe.bold(self.company)
+                )
+            )
+
+        self.set(self.party_account_field, liability_account)
+
+        frappe.msgprint(
+            _(
+                "Book Advance Payments as Liability option is chosen. "
+                "Paid From account changed from {0} to {1}."
+            ).format(
+                frappe.bold(self.party_account),
+                frappe.bold(liability_account),
+            ),
+            alert=True,
+        )
+
+
+
