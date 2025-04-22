@@ -496,7 +496,7 @@ class CustomPaymentEntry(BasePaymentEntry):
                 self.is_opening = "No"
                 return
 
-        # Company setting check
+        
         if not frappe.db.get_value(
             "Company", self.company, "book_advance_payments_in_separate_party_account"
         ):
