@@ -1,0 +1,57 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Program Enrollment",
+  "enabled": 0,
+  "modified": "2023-02-24 12:59:03.690786",
+  "module": null,
+  "name": "Program Enrollment-Form",
+  "script": "frappe.ui.form.on(\"Program Enrollment\", \"validate\", function(frm) {\r\n    // Get the student document associated with the program enrollment\r\n    var student = frm.doc.student;\r\n\r\n    // If the student is disabled, prevent the program enrollment from being saved\r\n    if (!student.enabled) {\r\n        frappe.msgprint(\"Cannot create program enrollment and fees for disabled student\");\r\n        validated = false;\r\n    }\r\n});\r\n",
+  "view": "Form"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Fees",
+  "enabled": 0,
+  "modified": "2023-02-24 12:59:08.372748",
+  "module": null,
+  "name": "Fees-Form",
+  "script": "frappe.ui.form.on(\"Fees\", \"validate\", function(frm) {\r\n    // Get the student document associated with the program enrollment\r\n    var student = frm.doc.student;\r\n\r\n    // If the student is disabled, prevent the program enrollment from being saved\r\n    if (!student.enabled) {\r\n        frappe.msgprint(\"Cannot create program enrollment and fees for disabled student\");\r\n        validated = false;\r\n    }\r\n});\r\n",
+  "view": "Form"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Payment Entry",
+  "enabled": 1,
+  "modified": "2024-10-07 11:21:11.822664",
+  "module": null,
+  "name": "Payment Entry",
+  "script": "frappe.ui.form.on('Payment Entry', {\n\trefresh(frm) {\n\t\t// your code here\n\t\t\tfrm.set_query(\"reference_doctype\", \"references\", function () {\n\t\t\t\tlet doctypes = [\"Journal Entry\",\"Fees\"];\n\t\t\tif (frm.doc.party_type == \"Customer\") {\n\t\t\t\tdoctypes = [\"Sales Order\", \"Sales Invoice\", \"Journal Entry\", \"Dunning\"];\n\t\t\t} else if (frm.doc.party_type == \"Supplier\") {\n\t\t\t\tdoctypes = [\"Purchase Order\", \"Purchase Invoice\", \"Journal Entry\"];\n\t\t\t}\n\n\t\t\treturn {\n\t\t\t\tfilters: { name: [\"in\", doctypes] },\n\t\t\t};\n\t\t\t\t    \n\t\t\t\t})\n\t}\n})",
+  "view": "Form"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Fees",
+  "enabled": 1,
+  "modified": "2024-11-04 18:39:47.640044",
+  "module": null,
+  "name": "Fees",
+  "script": "frappe.ui.form.on('Fees', {\n\trefresh(frm) {\n\t\tif (frm.doc.outstanding_amount===0){\n\t\t    frm.set_df_property(\"program_enrollment\", \"read_only\", 1)\n\t\t}\n\t\telse{\n\t\t    frm.set_df_property(\"program_enrollment\", \"read_only\", 0)\n\t\t    \n\t\t}\n\t}\n})",
+  "view": "Form"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Transfer Certificate Request",
+  "enabled": 1,
+  "modified": "2025-04-23 12:55:28.749909",
+  "module": "Thirvusoft Bpm",
+  "name": "Student info",
+  "script": "frappe.ui.form.on('Transfer Certificate Request', {\n\tadmission_no: function (frm) {\n\t\tif (!frm.doc.admission_no) return;\n\n\t\tfrappe.db.get_doc('Student', frm.doc.admission_no)\n\t\t\t.then(student => {\n\t\t\t\tfrm.set_value('name_of_the_student', student.student_name);\n\t\t\t\tfrm.set_value('gender', student.gender);\n\t\t\t\tfrm.set_value('udise_pen', student.uidai_no);\n\t\t\t\tfrm.set_value('dob_figures', student.date_of_birth);\n\t\t\t\tfrm.set_value('dob_words', convertDateToWords(student.date_of_birth));\n\t\t\t\tfrm.set_value('nationality', student.nationality);\n\t\t\t\tfrm.set_value('category', student.category);\n\t\t\t\tfrm.set_value('date_of_joining', student.joining_date);\n\t\t\t    \n\t\t\t    // Get values from Student Logs child table\n                if (student.student_logs && student.student_logs.length > 0) {\n                \tconst latest_log = student.student_logs[student.student_logs.length - 1];\n                \n                \t// Set values to main form fields\n                \tfrm.set_value('previous_school_attended', latest_log.prvious_school_attended);\n                \tfrm.set_value('course_attended_in_the_previous_school', latest_log.grade_qualified);\n                }\n\n\n\t\t\t\t// Set guardian names\n\t\t\t\tif (student.guardians?.length) {\n\t\t\t\t\tstudent.guardians.forEach(g => {\n\t\t\t\t\t\tif (g.relation === 'Father') frm.set_value('name_of_father', g.guardian_name);\n\t\t\t\t\t\tif (g.relation === 'Mother') frm.set_value('name_of_mother', g.guardian_name);\n\t\t\t\t\t});\n\t\t\t\t}\n\n\t\t\t\t// Get the latest Program Enrollment\n\t\t\t\tfrappe.db.get_list('Program Enrollment', {\n\t\t\t\t\tfilters: { student: student.name },\n\t\t\t\t\tfields: ['name', 'academic_year', 'program'],\n\t\t\t\t\torder_by: 'creation desc',\n\t\t\t\t\tlimit: 1\n\t\t\t\t}).then(pe_list => {\n\t\t\t\t\tif (pe_list.length > 0) {\n\t\t\t\t\t\tlet pe = pe_list[0];\n\t\t\t\t\t\tfrm.set_value('ay_figures', pe.academic_year);\n\t\t\t\t\t\tfrm.set_value('course_last_attended', pe.program);\n\t\t\t\t\t\tfrm.set_value('ay_words', convertYearToFullWords(pe.academic_year));\n\n\t\t\t\t\t\t// Fetch full Program Enrollment document with child table\n\t\t\t\t\t\tfrappe.db.get_doc('Program Enrollment', pe.name)\n\t\t\t\t\t\t\t.then(full_pe => {\n\t\t\t\t\t\t\t\tif (full_pe.courses && full_pe.courses.length > 0) {\n\t\t\t\t\t\t\t\t\t// Clear existing rows in Transfer Certificate child table\n\t\t\t\t\t\t\t\t\tfrm.clear_table('subjects_studied');\n\n\t\t\t\t\t\t\t\t\t// Copy each course into the Transfer Certificate child table\n\t\t\t\t\t\t\t\t\tfull_pe.courses.forEach(course => {\n\t\t\t\t\t\t\t\t\t\tlet row = frm.add_child('subjects_studied');\n\t\t\t\t\t\t\t\t\t\trow.course = course.course;\n\t\t\t\t\t\t\t\t\t\trow.course_name = course.course_name;\n\t\t\t\t\t\t\t\t\t});\n\n\t\t\t\t\t\t\t\t\tfrm.refresh_field('subjects_studied');\n\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t});\n\t\t\t\t\t}\n\t\t\t\t});\n\t\t\t})\n\t\t\t.catch(err => {\n\t\t\t\tconsole.error(err);\n\t\t\t\tfrappe.msgprint(__('Unable to fetch Student Info.'));\n\t\t\t});\n\t}\n});\n\n// Function to convert the date into full words (e.g., TWENTY SEVENTH MAY TWO THOUSAND FOURTEEN)\nfunction convertDateToWords(date) {\n\tconst dateObj = new Date(date);\n\tconst day = dateObj.getDate();\n\tconst month = dateObj.toLocaleString('default', { month: 'long' }).toUpperCase();\n\tconst year = dateObj.getFullYear();\n\n\tconst dayInWords = convertDayToWords(day);\n\tconst yearInWords = convertYearToWords(year);\n\n\treturn `${dayInWords} ${month} ${yearInWords}`;\n}\n\n// Function to convert the day to words\nfunction convertDayToWords(day) {\n\tconst words = [\n\t\t'FIRST', 'SECOND', 'THIRD', 'FOURTH', 'FIFTH', 'SIXTH', 'SEVENTH', 'EIGHTH', 'NINTH', 'TENTH',\n\t\t'ELEVENTH', 'TWELFTH', 'THIRTEENTH', 'FOURTEENTH', 'FIFTEENTH', 'SIXTEENTH', 'SEVENTEENTH',\n\t\t'EIGHTEENTH', 'NINETEENTH', 'TWENTIETH', 'TWENTY FIRST', 'TWENTY SECOND', 'TWENTY THIRD', \n\t\t'TWENTY FOURTH', 'TWENTY FIFTH', 'TWENTY SIXTH', 'TWENTY SEVENTH', 'TWENTY EIGHTH', 'TWENTY NINTH',\n\t\t'THIRTIETH', 'THIRTY FIRST'\n\t];\n\treturn words[day - 1];\n}\n\n// Function to convert the year for DOB (e.g., TWO THOUSAND FOURTEEN)\nfunction convertYearToWords(year) {\n\tconst ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE'];\n\tconst teens = ['TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'];\n\tconst tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];\n\n\tconst strYear = year.toString();\n\tlet words = '';\n\n\twords += `${ones[parseInt(strYear[0])]} THOUSAND `;\n\n\tconst secondPair = parseInt(strYear[1] + strYear[2]);\n\tif (secondPair < 10) {\n\t\twords += `${ones[secondPair]} `;\n\t} else if (secondPair < 20) {\n\t\twords += `${teens[secondPair - 10]} `;\n\t} else {\n\t\twords += `${tens[Math.floor(secondPair / 10)]} `;\n\t\tif (secondPair % 10 !== 0) {\n\t\t\twords += `${ones[secondPair % 10]} `;\n\t\t}\n\t}\n\n\twords += ones[parseInt(strYear[3])];\n\treturn words.trim();\n}\n\n// Function to convert year like 2026 to \"TWO THOUSAND TWENTY SIX\"\nfunction convertYearToFullWords(year) {\n\tconst ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE'];\n\tconst teens = ['TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'];\n\tconst tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];\n\n\tlet num = parseInt(year, 10);\n\tlet words = '';\n\n\tif (num >= 2000 && num < 3000) {\n\t\twords = 'TWO THOUSAND';\n\t\tconst lastTwoDigits = num % 100;\n\n\t\tif (lastTwoDigits > 0) {\n\t\t\twords += ' ';\n\t\t\tif (lastTwoDigits < 10) {\n\t\t\t\twords += ones[lastTwoDigits];\n\t\t\t} else if (lastTwoDigits < 20) {\n\t\t\t\twords += teens[lastTwoDigits - 10];\n\t\t\t} else {\n\t\t\t\twords += tens[Math.floor(lastTwoDigits / 10)];\n\t\t\t\tif (lastTwoDigits % 10 !== 0) {\n\t\t\t\t\twords += ' ' + ones[lastTwoDigits % 10];\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n\treturn words;\n}\n\n",
+  "view": "Form"
+ }
+]

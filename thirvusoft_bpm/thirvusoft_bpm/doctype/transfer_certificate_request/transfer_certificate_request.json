@@ -61,7 +61,6 @@
   "principal",
   "column_break_rzca4",
   "seat_retained",
-  "amended_from",
   "amended_from"
  ],
  "fields": [
@@ -82,6 +81,7 @@
    "label": "Transfer Certificate Request Date"
   },
   {
+   "allow_in_quick_entry": 1,
    "allow_on_submit": 1,
    "fieldname": "reason_for_leaving",
    "fieldtype": "Data",
@@ -130,6 +130,7 @@
    "label": "STUDENT INFORMATION"
   },
   {
+   "allow_in_quick_entry": 1,
    "fieldname": "admission_no",
    "fieldtype": "Link",
    "label": "Admission No",
@@ -378,14 +379,14 @@
    "no_copy": 1,
    "options": "Transfer Certificate Request",
    "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
+   "read_only": 1
   }
  ],
+ "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2024-07-02 14:41:42.824456",
+ "modified": "2025-04-17 17:40:12.949230",
  "modified_by": "Administrator",
  "module": "Thirvusoft Bpm",
  "name": "Transfer Certificate Request",
@@ -405,6 +406,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
