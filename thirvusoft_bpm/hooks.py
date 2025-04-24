@@ -239,6 +239,7 @@ user_data_fields = [
 # auth_hooks = [
 #	"thirvusoft_bpm.auth.validate"
 # ]
+#
 
 fixtures = [
     {
@@ -250,5 +251,9 @@ app_include_js = [
     "/assets/thirvusoft_bpm/js/razorpay_checkout.js"
 ]
 
+
+override_doctype_class = {
+    "Payment Entry": "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.CustomPaymentEntry"
+}
 
 
