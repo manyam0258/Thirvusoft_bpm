@@ -243,7 +243,7 @@ user_data_fields = [
 
 fixtures = [
     {
-        "doctype": "Server Script",
+        "doctype": "Client Script",
     }
 ]
 

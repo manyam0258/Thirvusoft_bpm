@@ -1,0 +1,68 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:transfer_certificate_request",
+ "creation": "2025-04-25 09:29:26.693865",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "transfer_certificate_request",
+  "student",
+  "tcr_activity",
+  "tcr_payment"
+ ],
+ "fields": [
+  {
+   "fieldname": "transfer_certificate_request",
+   "fieldtype": "Link",
+   "label": "Transfer Certificate Request",
+   "options": "Transfer Certificate Request",
+   "unique": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student ",
+   "options": "Student"
+  },
+  {
+   "fieldname": "tcr_activity",
+   "fieldtype": "Table",
+   "label": "TCR activity",
+   "options": "TCR Activity Log"
+  },
+  {
+   "fieldname": "tcr_payment",
+   "fieldtype": "Table",
+   "label": "TCR Payment",
+   "options": "TCR Payment Log"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-04-25 13:13:39.828988",
+ "modified_by": "Administrator",
+ "module": "Thirvusoft Bpm",
+ "name": "TCR Log",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
