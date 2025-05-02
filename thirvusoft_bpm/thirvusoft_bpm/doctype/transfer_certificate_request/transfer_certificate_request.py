@@ -118,3 +118,60 @@ class TransferCertificateRequest(Document):
                         words += f' {ones[last_two % 10]}'
         return words
 0.00
+
+import frappe
+from frappe.utils import nowdate
+from erpnext.accounts.doctype.payment_entry.payment_entry import PaymentEntry
+
+@frappe.whitelist()
+def create_payment_entry(tcr_name):
+    # Get the Transfer Certificate Request document
+    doc = frappe.get_doc("Transfer Certificate Request", tcr_name)
+
+    # Ensure 'admission_no' is set and is a valid Customer
+    if not doc.admission_no:
+        frappe.throw("Admission No is not set in Transfer Certificate Request.")
+    
+    if not frappe.db.exists("Customer", doc.admission_no):
+        frappe.throw(f"Customer with ID {doc.admission_no} does not exist.")
+
+    # Create a new Payment Entry document
+    pe = frappe.new_doc("Payment Entry")
+    pe.payment_type = "Receive"
+    pe.posting_date = nowdate()
+    pe.company = frappe.defaults.get_user_default("company")
+    pe.party_type = "Customer"
+    pe.party = doc.admission_no  # Set the customer from the admission_no field
+    pe.party_name = frappe.db.get_value("Customer", doc.admission_no, "customer_name")
+    pe.received_amount = doc.net_total or 0
+    pe.paid_amount = doc.net_total or 0
+
+    # Set default accounts for payment entry (receiving from customer)
+    pe.paid_from = frappe.get_value("Account", {
+        "company": pe.company,
+        "account_type": "Bank",
+        "is_group": 0
+    })  # Set default bank account (for paid_from)
+    pe.paid_to = frappe.get_value("Account", {
+        "company": pe.company,
+        "account_type": "Receivable",
+        "is_group": 0
+    })  # Set Receivable account
+
+    pe.reference_no = doc.name
+    pe.reference_date = nowdate()
+
+    # Set the custom field 'custom_tcr_reference' to link the TCR to Payment Entry
+    pe.custom_tcr_reference = doc.name  # This links the Payment Entry to TCR
+
+    # Insert & save Payment Entry
+    pe.insert(ignore_permissions=True)
+    
+    # Save again after the insert to make sure everything is saved properly
+    pe.save()
+
+    # Return the name of the Payment Entry
+    frappe.msgprint(f"Payment Entry {pe.name} created with TCR reference.")
+    return pe.name
+
+
