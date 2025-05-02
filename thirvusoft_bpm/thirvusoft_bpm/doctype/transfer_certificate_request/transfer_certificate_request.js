@@ -18,3 +18,25 @@ frappe.ui.form.on('Transfer Certificate Request', {
     }
 });
 
+
+frappe.ui.form.on('Transfer Certificate Request', {
+    refresh: function(frm) {
+        if (!frm.doc.__islocal) {
+            frm.add_custom_button(__('Create Payment Entry'), function () {
+                frappe.call({
+                    method: 'thirvusoft_bpm.thirvusoft_bpm.doctype.transfer_certificate_request.transfer_certificate_request.create_payment_entry',
+                    args: {
+                        tcr_name: frm.doc.name
+                    },
+                    callback: function (r) {
+                        if (r.message) {
+                            frappe.set_route("Form", "Payment Entry", r.message);
+                        }
+                    }
+                });
+            });
+        }
+    }
+});
+
+

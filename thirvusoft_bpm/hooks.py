@@ -243,7 +243,7 @@ user_data_fields = [
 
 fixtures = [
     {
-        "doctype": "Client Script",
+        "doctype": "Server Script",
     }
 ]
 
@@ -256,4 +256,6 @@ override_doctype_class = {
     "Payment Entry": "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.CustomPaymentEntry"
 }
 
+
+# hooks.py
 
