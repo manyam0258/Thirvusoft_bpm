@@ -26,10 +26,10 @@
   "doctype": "Client Script",
   "dt": "Payment Entry",
   "enabled": 1,
-  "modified": "2024-10-07 11:21:11.822664",
+  "modified": "2025-04-29 20:10:24.247820",
   "module": null,
   "name": "Payment Entry",
-  "script": "frappe.ui.form.on('Payment Entry', {\n\trefresh(frm) {\n\t\t// your code here\n\t\t\tfrm.set_query(\"reference_doctype\", \"references\", function () {\n\t\t\t\tlet doctypes = [\"Journal Entry\",\"Fees\"];\n\t\t\tif (frm.doc.party_type == \"Customer\") {\n\t\t\t\tdoctypes = [\"Sales Order\", \"Sales Invoice\", \"Journal Entry\", \"Dunning\"];\n\t\t\t} else if (frm.doc.party_type == \"Supplier\") {\n\t\t\t\tdoctypes = [\"Purchase Order\", \"Purchase Invoice\", \"Journal Entry\"];\n\t\t\t}\n\n\t\t\treturn {\n\t\t\t\tfilters: { name: [\"in\", doctypes] },\n\t\t\t};\n\t\t\t\t    \n\t\t\t\t})\n\t}\n})",
+  "script": "frappe.ui.form.on('Payment Entry', {\n\trefresh(frm) {\n\t\t// your code here\n\t\t\tfrm.set_query(\"reference_doctype\", \"references\", function () {\n\t\t\t\tlet doctypes = [\"Journal Entry\",\"Fees\"];\n\t\t\tif (frm.doc.party_type == \"Customer\") {\n\t\t\t\tdoctypes = [\"Sales Order\", \"Sales Invoice\", \"Journal Entry\", \"Dunning\"];\n\t\t\t} else if (frm.doc.party_type == \"Supplier\") {\n\t\t\t\tdoctypes = [\"Purchase Order\", \"Purchase Invoice\", \"Journal Entry\"];\n\t\t\t}\n\n\t\t\treturn {\n\t\t\t\tfilters: { name: [\"in\", doctypes] },\n\t\t\t};\n\t\t\t\t    \n\t\t\t\t})\n\t}\n})\n\n",
   "view": "Form"
  },
  {
@@ -59,10 +59,10 @@
   "doctype": "Client Script",
   "dt": "Student",
   "enabled": 1,
-  "modified": "2025-04-25 12:40:33.937908",
+  "modified": "2025-05-03 18:52:59.485917",
   "module": null,
   "name": "student",
-  "script": "frappe.ui.form.on('Student', {\n    refresh(frm) {\n        if (!frm.doc.name) return;\n\n        frappe.db.get_list('Transfer Certificate Request', {\n            filters: {\n                admission_no: frm.doc.name,\n                docstatus: 1 // Check only submitted records\n            },\n            fields: ['custom_seat_retain_upto'],\n            limit: 1\n        }).then(tc_list => {\n            if (tc_list.length > 0) {\n                const tc = tc_list[0];\n\n                // Step 1: Display the seat retention message\n                if (tc.custom_seat_retain_upto) {\n                    frappe.msgprint({\n                        title: __('Seat Retention'),\n                        message: __('Seat retained up to: {0}', [\n                            frappe.datetime.str_to_user(tc.custom_seat_retain_upto)\n                        ]),\n                        indicator: 'blue'\n                    });\n                }\n\n                // Step 2: Show a message to prevent further transactions\n                frappe.msgprint(__('This student cannot be included in any transactions due to seat retention.'));\n\n                // Optional: Disable further interactions with this student\n                frm.set_df_property('admission_no', 'read_only', 1);  // Example: Disable the 'admission_no' field\n                frm.set_df_property('name', 'read_only', 1);  // Disable the 'name' field to prevent any modifications\n            }\n        });\n    }\n});\n",
+  "script": "frappe.ui.form.on('Student', {\n    refresh(frm) {\n        if (!frm.doc.name) return;\n\n        frappe.db.get_list('Transfer Certificate Request', {\n            filters: {\n                admission_no: frm.doc.name,\n                docstatus: 1 // Only submitted records\n            },\n            fields: ['custom_seat_retain_upto', 'seat_retained'],\n            limit: 1\n        }).then(tc_list => {\n            if (tc_list.length > 0) {\n                const tc = tc_list[0];\n\n                // Proceed only if 'seat_retained' checkbox is checked\n                if (tc.seat_retained) {\n                    // Step 1: Display the seat retention message\n                    if (tc.custom_seat_retain_upto) {\n                        frappe.msgprint({\n                            title: __('Seat Retention'),\n                            message: __('Seat retained up to: {0}', [\n                                frappe.datetime.str_to_user(tc.custom_seat_retain_upto)\n                            ]),\n                            indicator: 'blue'\n                        });\n                    }\n\n                    // Step 2: Show a message to prevent further transactions\n                    frappe.msgprint(__('This student cannot be included in any transactions due to seat retention.'));\n\n                    // Optional: Disable further interactions with this student\n                    frm.set_df_property('admission_no', 'read_only', 1);\n                    frm.set_df_property('name', 'read_only', 1);\n                }\n            }\n        });\n    }\n});\n",
   "view": "Form"
  },
  {

@@ -1,0 +1,209 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2023-03-12 07:47:51.665295",
+  "name": "Pending Approval By Nikita",
+  "style": "",
+  "workflow_state_name": "Pending Approval By Nikita"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2023-03-12 08:15:35.796621",
+  "name": "Applied",
+  "style": "",
+  "workflow_state_name": "Applied"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2023-03-12 08:20:20.866812",
+  "name": "Cancelled",
+  "style": "",
+  "workflow_state_name": "Cancelled"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2023-03-12 08:31:55.060215",
+  "name": "Approval Pending By Admin",
+  "style": "",
+  "workflow_state_name": "Approval Pending By Admin"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2023-03-12 08:49:59.847713",
+  "name": "Approved By Admin",
+  "style": "",
+  "workflow_state_name": "Approved By Admin"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2025-05-03 15:25:10.926561",
+  "name": "Raise TCR",
+  "style": "",
+  "workflow_state_name": "Raise TCR"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2025-05-03 15:34:28.456580",
+  "name": "Finance confirmation of outstanding",
+  "style": "",
+  "workflow_state_name": "Finance confirmation of outstanding"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2025-05-03 15:35:21.804991",
+  "name": "Finance manager approval",
+  "style": "",
+  "workflow_state_name": "Finance manager approval"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2025-05-03 15:43:12.913996",
+  "name": "Approval pending from admin",
+  "style": "",
+  "workflow_state_name": "Approval pending from admin"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2025-05-03 15:56:59.478523",
+  "name": "Awaiting Finance Approval",
+  "style": "",
+  "workflow_state_name": "Awaiting Finance Approval"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2025-05-03 15:57:30.727912",
+  "name": "Awaiting Admin Approval",
+  "style": "",
+  "workflow_state_name": "Awaiting Admin Approval"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2025-05-03 15:57:50.867435",
+  "name": "Awaiting VP Review",
+  "style": "",
+  "workflow_state_name": "Awaiting VP Review"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2025-05-03 15:58:02.916995",
+  "name": "Awaiting Principal Approval",
+  "style": "",
+  "workflow_state_name": "Awaiting Principal Approval"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2025-05-03 15:58:17.214323",
+  "name": "Awaiting Final Settlement",
+  "style": "",
+  "workflow_state_name": "Awaiting Final Settlement"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2025-05-03 15:58:36.350105",
+  "name": "TCR Closed",
+  "style": "",
+  "workflow_state_name": "TCR Closed"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2025-05-03 15:58:49.879498",
+  "name": "Certificate Issued",
+  "style": "",
+  "workflow_state_name": "Certificate Issued"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "remove",
+  "modified": "2023-02-10 14:58:46.407537",
+  "name": "Rejected",
+  "style": "Danger",
+  "workflow_state_name": "Rejected"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2023-03-12 08:48:38.102065",
+  "name": "Submitted For Approval",
+  "style": "",
+  "workflow_state_name": "Submitted For Approval"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2024-04-01 14:01:27.899954",
+  "name": "Review",
+  "style": "Info",
+  "workflow_state_name": "Review"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "question-sign",
+  "modified": "2023-02-10 14:58:46.401793",
+  "name": "Pending",
+  "style": "",
+  "workflow_state_name": "Pending"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "ok-sign",
+  "modified": "2023-02-10 14:58:46.404721",
+  "name": "Approved",
+  "style": "Success",
+  "workflow_state_name": "Approved"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2023-04-08 13:17:01.702154",
+  "name": "Approval Pending By Manager",
+  "style": "",
+  "workflow_state_name": "Approval Pending By Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2023-03-12 07:47:22.940891",
+  "name": "Draft",
+  "style": "",
+  "workflow_state_name": "Draft"
+ }
+]

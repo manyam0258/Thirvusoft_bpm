@@ -175,3 +175,98 @@ def create_payment_entry(tcr_name):
     return pe.name
 
 
+
+# transfer_certificate_request.py
+
+import frappe
+from frappe.utils.background_jobs import enqueue
+from frappe import _
+
+def send_tcr_guardian_mail(doc, method=None):
+    if doc.workflow_state != "Awaiting VP Review":
+        return
+
+    # Fetch guardian emails
+    guardian_emails = frappe.db.sql("""
+        SELECT g.email_address as guardian_email 
+        FROM `tabStudent Guardian` sg
+        JOIN `tabGuardian` g ON sg.guardian = g.name
+        WHERE sg.parent = %s
+        GROUP BY g.name
+    """, (doc.admission_no,), as_dict=True)
+
+    guardian_email_list = [entry["guardian_email"] for entry in guardian_emails if entry["guardian_email"]]
+    if not guardian_email_list:
+        return
+
+    # Fetch values from Company
+    company = doc.institute
+    bcc_email, raw_template, print_format = frappe.db.get_value(
+        "Company",
+        company,
+        ["default_email", "custom_parent_email_template", "custom_tcr_print_format"]
+    )
+
+    bcc_list = [bcc_email] if bcc_email else []
+
+    # Render email message using the template
+    if raw_template:
+        try:
+            message = frappe.render_template(raw_template, {"doc": doc})
+        except Exception as e:
+            frappe.log_error(f"Template rendering error for {doc.name}: {str(e)}", "send_tcr_guardian_mail")
+            message = fallback_message(doc.admission_no)
+    else:
+        message = fallback_message(doc.admission_no)
+
+    subject = _("Transfer Certificate Request for {0}").format(doc.admission_no)
+
+    # Generate PDF using the custom print format
+    pdf = None
+    if print_format:
+        try:
+            pdf = frappe.get_print(
+                doctype=doc.doctype,
+                name=doc.name,
+                print_format=print_format,
+                as_pdf=True
+            )
+        except Exception as e:
+            frappe.log_error(f"PDF generation failed for {doc.name}: {str(e)}", "send_tcr_guardian_mail")
+
+    attachments = [{"fname": f"TCR_{doc.name}.pdf", "fcontent": pdf}] if pdf else []
+
+    # Send the email
+    try:
+        enqueue(method=frappe.sendmail, queue="short", timeout=300, is_async=True,
+            recipients=guardian_email_list,
+            bcc=bcc_list,
+            sender=None,
+            subject=subject,
+            message=message,
+            attachments=attachments,
+            now=True
+        )
+        frappe.logger().info(f"Guardian mail for TCR {doc.name} queued successfully with PDF.")
+        
+        # Show success message
+        frappe.msgprint(_("Transfer Certificate Request email has been successfully queued and sent."))
+        
+    except Exception as e:
+        frappe.log_error(f"Email send error for {doc.name}: {str(e)}", "send_tcr_guardian_mail")
+
+def fallback_message(admission_no):
+    return _(
+        """
+        Dear Guardian,<br><br>
+        The Transfer Certificate Request for your ward (Admission No: <strong>{0}</strong>) 
+        has been approved by the Admin and is now under review by the Vice Principal.<br><br>
+        Regards,<br>School Office
+        """
+    ).format(admission_no)
+
+
+
+
+
+
