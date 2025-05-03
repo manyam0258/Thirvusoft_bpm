@@ -74,5 +74,24 @@
   "reference_doctype": "Transfer Certificate Request",
   "script": "# Trigger the creation of the TCR Log when a Transfer Certificate Request is created\ndef create_tcr_log(doc):\n    # Create the TCR Log document\n    tcr_log = frappe.new_doc(\"TCR Log\")\n    tcr_log.transfer_certificate_request = doc.name\n    tcr_log.student = doc.student\n\n    # Append an activity to the child table\n    tcr_log.append(\"tcr_activity\", {\n        \"activity_date\": frappe.utils.now(),  # Use frappe.utils.now() for the current datetime\n        \"activity_type\": \"TCR Request Created\",\n        \"performed_by\": frappe.session.user,\n        \"comment\": f\"TCR Request created by {frappe.session.user}\"\n    })\n\n    # Save the TCR Log\n    tcr_log.insert(ignore_permissions=True)\n\n    # Display a message after the TCR Log is created\n    frappe.msgprint(\"TCR Log is created successfully!\")\n\n# Call the function to create the TCR Log\ncreate_tcr_log(doc)\n",
   "script_type": "DocType Event"
+ },
+ {
+  "allow_guest": 0,
+  "api_method": null,
+  "cron_format": null,
+  "disabled": 1,
+  "docstatus": 0,
+  "doctype": "Server Script",
+  "doctype_event": "After Save",
+  "enable_rate_limit": 0,
+  "event_frequency": "All",
+  "modified": "2025-05-03 17:24:34.728283",
+  "module": null,
+  "name": "tcr mail",
+  "rate_limit_count": 5,
+  "rate_limit_seconds": 86400,
+  "reference_doctype": "Transfer Certificate Request",
+  "script": "# Only trigger if workflow state changed to \"Awaiting VP Review\"\nif doc.workflow_state == \"Awaiting VP Review\":\n    frappe.get_doc(\"Transfer Certificate Request\", doc.name).run_method(\"send_tcr_guardian_mail\")\n",
+  "script_type": "DocType Event"
  }
 ]
