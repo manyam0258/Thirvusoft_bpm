@@ -17,6 +17,8 @@ class TransferCertificateRequest(Document):
         self.nationality = student.nationality
         self.category = student.category
         self.date_of_joining = student.joining_date
+        self.transfer_certificate_request_no = self.name
+        self.transfer_certificate_no = self.name
 
         # Student Logs
         if student.student_logs:
