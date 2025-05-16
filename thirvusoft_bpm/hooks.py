@@ -257,3 +257,16 @@ override_doctype_class = {
 }
 
 
+# hooks.py
+
+# hooks.py
+
+
+
+doc_events = {
+    "Transfer Certificate Request": {
+        "on_update": "thirvusoft_bpm.thirvusoft_bpm.doctype.transfer_certificate_request.transfer_certificate_request.send_tcr_guardian_mail"
+    }
+}
+
+
