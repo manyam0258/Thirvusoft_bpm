@@ -18,7 +18,6 @@ class TransferCertificateRequest(Document):
         self.category = student.category
         self.date_of_joining = student.joining_date
         self.transfer_certificate_request_no = self.name
-        self.transfer_certificate_no = self.name
 
         # Student Logs
         if student.student_logs:
@@ -56,6 +55,9 @@ class TransferCertificateRequest(Document):
                     'course': course.course,
                     'course_name': course.course_name
                 })
+     # ✅ Set transfer_certificate_no if workflow_state is Awaiting Final Settlement
+        if self.workflow_state == "Awaiting Final Settlement" and not self.transfer_certificate_no:
+            self.transfer_certificate_no = self.transfer_certificate_request_no
 
     def convert_date_to_words(self, date):
         if not date:
