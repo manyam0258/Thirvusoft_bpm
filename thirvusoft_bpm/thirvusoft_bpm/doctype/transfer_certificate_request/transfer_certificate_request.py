@@ -11,7 +11,7 @@ class TransferCertificateRequest(Document):
 
         self.name_of_the_student = student.student_name
         self.gender = student.gender
-        self.udise_pen = student.uidai_no
+        self.udise_pen = student.pen
         self.dob_figures = student.date_of_birth
         self.dob_words = self.convert_date_to_words(student.date_of_birth)
         self.nationality = student.nationality
