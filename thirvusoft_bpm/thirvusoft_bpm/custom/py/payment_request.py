@@ -241,6 +241,8 @@ PaymentRequest.validate_payment_request_amount = custom_validate_payment_request
 
 
 
+
+
 def get_advance_entries(doc,event):
     # if doc.party_type == "Student" and doc.party and frappe.db.get_value('Student',doc.party,'virtual_account'):
     #     doc.virtual_account  = frappe.db.get_value('Student',doc.party,'virtual_account')
@@ -442,6 +444,9 @@ def custom_get_amount(ref_doc, payment_account=None):
         return flt(ref_doc.outstanding_amount)
 
     frappe.throw(_("Payment Entry is already created or no payable amount available"))
+
+
+
 
 
 

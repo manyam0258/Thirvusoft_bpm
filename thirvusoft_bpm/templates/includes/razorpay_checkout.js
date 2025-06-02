@@ -70,3 +70,6 @@ razorpay.make_payment_log = function(response, options, doctype, docname, token)
 		}
 	})
 }
+
+
+
