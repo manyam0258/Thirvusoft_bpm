@@ -2,7 +2,8 @@ $(document).ready(function(){
 	(function(e){
 		var options = {
 			"key": "{{ api_key }}",
-			"amount": cint({{ amount }} * 100), // 2000 paise = INR 20
+			// "amount": cint({{ amount }}), // 2000 paise = INR 20
+			"amount": "cint({{ amount }}) * 100", // 2000 paise = INR 20
 			"name": "{{ title }}",
 			"description": "{{ description }}",
 			"subscription_id": "{{ subscription_id }}",
@@ -50,7 +51,7 @@ razorpay.make_payment_log = function(response, options, doctype, docname, token)
 	$('.razorpay-confirming').removeClass('hidden');
 
 	frappe.call({
-		method:"frappe.templates.pages.integrations.razorpay_checkout.make_payment",
+		method:"payments.templates.pages.razorpay_checkout.make_payment",
 		freeze:true,
 		headers: {"X-Requested-With": "XMLHttpRequest"},
 		args: {
@@ -70,6 +71,5 @@ razorpay.make_payment_log = function(response, options, doctype, docname, token)
 		}
 	})
 }
-
 
 
