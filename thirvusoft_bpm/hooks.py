@@ -156,6 +156,9 @@ doc_events = {
 		"validate": "thirvusoft_bpm.thirvusoft_bpm.custom.py.integration_request.update_expiry_date",
 
 	},
+    "Transfer Certificate Request": {
+        "on_update": "thirvusoft_bpm.thirvusoft_bpm.doctype.transfer_certificate_request.transfer_certificate_request.send_tcr_guardian_mail"
+    },
 }
 
 # Scheduled Tasks
@@ -263,10 +266,9 @@ override_doctype_class = {
 
 
 
-doc_events = {
-    "Transfer Certificate Request": {
-        "on_update": "thirvusoft_bpm.thirvusoft_bpm.doctype.transfer_certificate_request.transfer_certificate_request.send_tcr_guardian_mail"
-    }
-}
-
+# doc_events = {
+#     "Transfer Certificate Request": {
+#         "on_update": "thirvusoft_bpm.thirvusoft_bpm.doctype.transfer_certificate_request.transfer_certificate_request.send_tcr_guardian_mail"
+#     }
+# }
 
