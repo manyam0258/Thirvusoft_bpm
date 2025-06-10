@@ -260,6 +260,9 @@ override_doctype_class = {
 }
 
 
+
+after_migrate = ["thirvusoft_bpm.patches.custom_razorpay_setting.monkey_patch_razorpay"]
+
 # hooks.py
 
 # hooks.py
