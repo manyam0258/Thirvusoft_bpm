@@ -576,29 +576,29 @@ def custom_make_payment_request(**args):
 
     gateway_account = frappe._dict(gateway_account_doc[0])
 
-    # Cancel/delete only unpaid and unprocessed PRs (skip partially paid or completed)
-    existing_prs = frappe.get_all(
-        "Payment Request",
-        filters={
-            "reference_doctype": args.dt,
-            "reference_name": args.dn,
-            "docstatus": ["<", 2],  # Draft or Submitted
-            "status": ["!=", "Paid"]
-        },
-        fields=["name", "docstatus", "status"]
-    )
-    for pr in existing_prs:
-        pr_doc = frappe.get_doc("Payment Request", pr.name)
+    # # Cancel/delete only unpaid and unprocessed PRs (skip partially paid or completed)
+    # existing_prs = frappe.get_all(
+    #     "Payment Request",
+    #     filters={
+    #         "reference_doctype": args.dt,
+    #         "reference_name": args.dn,
+    #         "docstatus": ["<", 2],  # Draft or Submitted
+    #         "status": ["!=", "Paid"]
+    #     },
+    #     fields=["name", "docstatus", "status"]
+    # )
+    # for pr in existing_prs:
+    #     pr_doc = frappe.get_doc("Payment Request", pr.name)
 
-        # Skip partially paid or processed requests
-        if pr_doc.status in ["Partially Paid", "Completed", "Authorized"]:
-            continue
+    #     # Skip partially paid or processed requests
+    #     if pr_doc.status in ["Partially Paid", "Completed", "Authorized"]:
+    #         continue
 
-        # Cancel or delete only fully unused drafts or submitted
-        if pr_doc.docstatus == 1:
-            pr_doc.cancel()
-        else:
-            pr_doc.delete()
+    #     # Cancel or delete only fully unused drafts or submitted
+    #     if pr_doc.docstatus == 1:
+    #         pr_doc.cancel()
+    #     else:
+    #         pr_doc.delete()
 
     # Determine payment amount: prioritize args.amount, then custom_net_payable, then outstanding_amount
     payment_amount = (
