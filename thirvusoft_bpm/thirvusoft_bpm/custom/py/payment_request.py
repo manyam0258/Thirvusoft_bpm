@@ -607,8 +607,6 @@ def custom_make_payment_request(**args):
         or flt(ref_doc.get("outstanding_amount"))
     )
 
-    if payment_amount <= 0:
-        frappe.throw(_("No valid amount to create a payment request."))
 
     # Prepare new PR
     pr = frappe.new_doc("Payment Request")
