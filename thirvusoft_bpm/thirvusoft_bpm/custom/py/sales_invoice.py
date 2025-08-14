@@ -237,30 +237,108 @@ def fetch_previous_outstanding_amount(doc):
         )
 """
 # Chatgpt fix
-def fetch_previous_outstanding_amount(doc):
-    if not doc.is_new():
-        # Ensure previous outstanding amount is not updated after creation
-        existing_previous_outstanding = frappe.db.get_value("Sales Invoice", doc.name, "custom_previous_outstanding_amount")
+# def fetch_previous_outstanding_amount(doc):
+#     if not doc.is_new():
+#         # Ensure previous outstanding amount is not updated after creation
+#         existing_previous_outstanding = frappe.db.get_value("Sales Invoice", doc.name, "custom_previous_outstanding_amount")
         
-        if existing_previous_outstanding is not None:
-            doc.custom_previous_outstanding_amount = existing_previous_outstanding
-            return  # Prevent recalculation
+#         if existing_previous_outstanding is not None:
+#             doc.custom_previous_outstanding_amount = existing_previous_outstanding
+#             return  # Prevent recalculation
 
-    # Only fetch outstanding balance during creation
-    if frappe.get_value("Company", doc.company, "enable_prevoius_amount"):
-        doc.custom_previous_outstanding_amount = get_outstanding_amount(
-            doc.debit_to, doc.customer
+#     # Only fetch outstanding balance during creation
+#     if frappe.get_value("Company", doc.company, "enable_prevoius_amount"):
+#         doc.custom_previous_outstanding_amount = get_outstanding_amount(
+#             doc.debit_to, doc.customer
+#         )
+#         doc.custom_net_payable = round_based_on_smallest_currency_fraction(
+#             doc.custom_previous_outstanding_amount + doc.outstanding_amount,
+#             doc.currency, doc.precision("custom_net_payable")
+#         )
+#     else:
+#         doc.custom_previous_outstanding_amount = 0
+#         doc.custom_net_payable = round_based_on_smallest_currency_fraction(
+#             doc.outstanding_amount,
+#             doc.currency, doc.precision("custom_net_payable")
+#         )
+
+import frappe
+from frappe.utils import flt
+
+def fetch_previous_outstanding_amount(doc):
+    # Case 1: If invoice already exists in DB, just pull stored value
+    if not doc.is_new():
+        existing_previous_outstanding = frappe.db.get_value(
+            "Sales Invoice", doc.name, "custom_previous_outstanding_amount"
         )
-        doc.custom_net_payable = round_based_on_smallest_currency_fraction(
-            doc.custom_previous_outstanding_amount + doc.outstanding_amount,
-            doc.currency, doc.precision("custom_net_payable")
+        if existing_previous_outstanding is not None:
+            doc.custom_previous_outstanding_amount = flt(
+                existing_previous_outstanding,
+                doc.precision("custom_previous_outstanding_amount")
+            )
+            return
+
+    # Get company setting for previous amount calculation
+    if frappe.db.get_value("Company", doc.company, "enable_prevoius_amount"):
+        # Always take account from Company.doctype → outstanding_receivable_account
+        receivable_account = frappe.db.get_value(
+            "Company", doc.company, "outstanding_receivable_account"
         )
+
+        # If company has not set the account, default to 0
+        if not receivable_account:
+            frappe.throw(f"Outstanding Receivable Account is not set for company {doc.company}")
+
+        # Fetch previous outstanding from GL Entry
+        previous_outstanding = frappe.db.sql("""
+            SELECT IFNULL(SUM(debit) - SUM(credit), 0)
+            FROM `tabGL Entry`
+            WHERE party_type = 'Customer'
+              AND party = %s
+              AND company = %s
+              AND account = %s
+              AND is_cancelled = 0
+        """, (doc.customer, doc.company, receivable_account))[0][0] or 0
+
+        # Set fields with precision handling
+        doc.custom_previous_outstanding_amount = flt(
+            previous_outstanding,
+            doc.precision("custom_previous_outstanding_amount")
+        )
+        doc.custom_net_payable = flt(
+            previous_outstanding + flt(doc.outstanding_amount),
+            doc.precision("custom_net_payable")
+        )
+
     else:
+        # Setting disabled → no previous outstanding considered
         doc.custom_previous_outstanding_amount = 0
-        doc.custom_net_payable = round_based_on_smallest_currency_fraction(
-            doc.outstanding_amount,
-            doc.currency, doc.precision("custom_net_payable")
+        doc.custom_net_payable = flt(
+            flt(doc.outstanding_amount),
+            doc.precision("custom_net_payable")
         )
+
+
+
+def get_outstanding_invoices(customer, company, account):
+    # Fetch all outstanding Sales Invoices for this customer & account
+    invoices = frappe.get_all(
+        "Sales Invoice",
+        filters={
+            "customer": customer,
+            "company": company,
+            "debit_to": account,
+            "docstatus": 1,
+            "outstanding_amount": [">", 0]
+        },
+        fields=["outstanding_amount"]
+    )
+
+    # Sum and round each value before adding, then round the total once
+    total = sum(round(flt(inv.outstanding_amount), 2) for inv in invoices)
+    return round(total, 2)
+
+
 
 
 
