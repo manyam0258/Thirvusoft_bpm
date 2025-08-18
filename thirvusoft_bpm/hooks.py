@@ -258,6 +258,14 @@ app_include_js = [
 override_doctype_class = {
     "Payment Entry": "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.CustomPaymentEntry"
 }
+from erpnext.accounts.doctype.payment_entry import payment_entry
+from thirvusoft_bpm.thirvusoft_bpm.custom.py import payment_entry as custom_payment_entry
+
+def override_payment_entry_methods():
+    payment_entry.PaymentEntry.get_valid_reference_doctypes = custom_payment_entry.custom_get_valid_reference_doctypes
+
+# run override when app starts
+override_payment_entry_methods()
 
 
 

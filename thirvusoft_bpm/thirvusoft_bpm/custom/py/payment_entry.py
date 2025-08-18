@@ -32,6 +32,18 @@ from erpnext.accounts.doctype.payment_entry.payment_entry import PaymentEntry as
 
 
 
+import frappe
+from erpnext.accounts.doctype import payment_entry
+
+def custom_get_valid_reference_doctypes(self):
+    if self.party_type == "Customer":
+        return ("Sales Order", "Sales Invoice", "Journal Entry", "Dunning", "Payment Entry", "Delivery Note")
+    elif self.party_type in ["Shareholder", "Employee"]:
+        return ("Journal Entry", "Expense Claim","Employee Advance", "Leave Encashment", "Gratuity",)
+    elif self.party_type == "Supplier":
+        return ("Purchase Order", "Purchase Invoice", "Journal Entry", "Payment Entry", "Purchase Receipt")
+    # default fallback
+    return ()
 
 class CustomPayment(EmployeePaymentEntry):
     def validate_transaction_reference(self):
