@@ -30,21 +30,6 @@ from erpnext.accounts.doctype.payment_entry.payment_entry import PaymentEntry as
 
 
 
-
-
-import frappe
-from erpnext.accounts.doctype import payment_entry
-
-def custom_get_valid_reference_doctypes(self):
-    if self.party_type == "Customer":
-        return ("Sales Order", "Sales Invoice", "Journal Entry", "Dunning", "Payment Entry", "Delivery Note")
-    elif self.party_type in ["Shareholder", "Employee"]:
-        return ("Journal Entry", "Expense Claim","Employee Advance", "Leave Encashment", "Gratuity",)
-    elif self.party_type == "Supplier":
-        return ("Purchase Order", "Purchase Invoice", "Journal Entry", "Payment Entry", "Purchase Receipt")
-    # default fallback
-    return ()
-
 class CustomPayment(EmployeePaymentEntry):
     def validate_transaction_reference(self):
         bank_account = self.paid_to if self.payment_type == "Receive" else self.paid_from
@@ -407,7 +392,7 @@ def send_purchase_msg(doc):
 
 import frappe
 from frappe.utils.background_jobs import enqueue
-from frappe import _
+from frappe import _, throw
 
 def send_payment_mail(doc, method=None):
     # Fetch Payment Gateway Account using the company
@@ -484,38 +469,133 @@ def send_payment_mail(doc, method=None):
 
 import frappe
 from frappe import _
-from frappe.model.document import Document
-from erpnext.accounts.doctype.payment_entry.payment_entry import PaymentEntry as BasePaymentEntry
-from erpnext.accounts.doctype.payment_entry.payment_entry import get_party_account
+from erpnext.accounts.doctype.payment_entry.payment_entry import (
+    PaymentEntry as BasePaymentEntry,
+    get_party_account,
+)
+
+# import frappe
+# from frappe import _
+# from erpnext.accounts.doctype.payment_entry.payment_entry import (
+#     PaymentEntry as BasePaymentEntry,
+#     get_party_account,
+# )
+# from hrms.overrides.employee_payment_entry import EmployeePaymentEntry
 
 
-class CustomPaymentEntry(BasePaymentEntry):
+# class CustomPaymentEntry(EmployeePaymentEntry, BasePaymentEntry):
+#     """Custom Payment Entry that combines ERPNext PaymentEntry + EmployeePaymentEntry + Student logic"""
+
+#     def set_liability_account(self):
+#         # Handle Internal Transfer and submitted docs as per ERPNext
+#         if self.docstatus > 0 or self.payment_type == "Internal Transfer":
+#             return super().set_liability_account()
+
+#         # Only apply custom logic if Customer Group is 'Student'
+#         if self.party_type == "Customer":
+#             customer_group = frappe.db.get_value("Customer", self.party, "customer_group")
+#             if customer_group == "Student":
+#                 return self._set_student_liability_account()
+
+#         # For everything else → fallback to ERPNext/Employee logic
+#         return super().set_liability_account()
+
+#     def _set_student_liability_account(self):
+#         """Custom logic for Student Customers only"""
+
+#         self.book_advance_payments_in_separate_party_account = False
+
+#         if not frappe.db.get_value(
+#             "Company", self.company, "book_advance_payments_in_separate_party_account"
+#         ):
+#             self.is_opening = "No"
+#             return
+
+#         # Important to set this flag for GL building logic
+#         self.book_advance_payments_in_separate_party_account = True
+
+#         account_type = frappe.get_value(
+#             "Account", {"name": self.party_account, "company": self.company}, "account_type"
+#         )
+
+#         if account_type == "Payable":
+#             self.is_opening = "No"
+#             return
+
+#         # For Student customers we only allow Sales Order references
+#         if self.references:
+#             allowed_types = frozenset(["Sales Order"])
+#             reference_types = {x.reference_doctype for x in self.references}
+
+#             # If there are references other than allowed, treat as normal PE
+#             if reference_types - allowed_types:
+#                 self.book_advance_payments_in_separate_party_account = False
+#                 self.is_opening = "No"
+#                 return
+
+#         accounts = get_party_account(
+#             self.party_type, self.party, self.company, include_advance=True
+#         )
+#         liability_account = accounts[1] if len(accounts) > 1 else None
+
+#         fieldname = "default_advance_received_account"
+
+#         if not liability_account:
+#             frappe.throw(
+#                 _("Please set default {0} in Company {1}").format(
+#                     frappe.bold(frappe.get_meta("Company").get_label(fieldname)),
+#                     frappe.bold(self.company),
+#                 )
+#             )
+
+#         self.set(self.party_account_field, liability_account)
+
+#         frappe.msgprint(
+#             _(
+#                 "Book Advance Payments as Liability option is chosen. "
+#                 "Paid From account changed from {0} to {1}."
+#             ).format(
+#                 frappe.bold(self.party_account),
+#                 frappe.bold(liability_account),
+#             ),
+#             alert=True,
+#         )
+
+import frappe
+from frappe import _
+from erpnext.accounts.doctype.payment_entry.payment_entry import (
+    PaymentEntry as BasePaymentEntry,
+    get_party_account,
+)
+
+
+class CustomPaymentEntry(EmployeePaymentEntry, BasePaymentEntry):
     def set_liability_account(self):
-        # Auto setting liability account should only be done during 'draft' status
+        # Only run in draft and not for internal transfers
         if self.docstatus > 0 or self.payment_type == "Internal Transfer":
             return
 
         self.book_advance_payments_in_separate_party_account = False
 
-        if self.party_type not in ("Customer", "Supplier"):
+        # Allow only Customer, Supplier, and Employee
+        if self.party_type not in ("Customer", "Supplier", "Employee"):
             self.is_opening = "No"
             return
 
-        # Only apply logic if Customer Group is 'Student'
+        # Custom rule: apply special logic only for Student Customers
         if self.party_type == "Customer":
             customer_group = frappe.db.get_value("Customer", self.party, "customer_group")
             if customer_group != "Student":
                 self.is_opening = "No"
                 return
 
-        
+        # Company setting must allow separate advance accounts
         if not frappe.db.get_value(
             "Company", self.company, "book_advance_payments_in_separate_party_account"
         ):
             self.is_opening = "No"
             return
 
-        # Important to set this flag for the GL building logic to work properly
         self.book_advance_payments_in_separate_party_account = True
 
         account_type = frappe.get_value(
@@ -528,17 +608,24 @@ class CustomPaymentEntry(BasePaymentEntry):
             self.is_opening = "No"
             return
 
+        # Allowed references (add Employee ones too)
         if self.references:
-            allowed_types = frozenset(["Sales Order", "Purchase Order"])
-            reference_types = set([x.reference_doctype for x in self.references])
+            allowed_types = frozenset([
+                "Sales Order",
+                "Purchase Order",
+                "Expense Claim",
+                "Employee Advance"
+            ])
+            reference_types = {x.reference_doctype for x in self.references}
 
-            # If there are references other than `allowed_types`, treat this as a normal payment entry
             if reference_types - allowed_types:
                 self.book_advance_payments_in_separate_party_account = False
                 self.is_opening = "No"
                 return
 
-        accounts = get_party_account(self.party_type, self.party, self.company, include_advance=True)
+        accounts = get_party_account(
+            self.party_type, self.party, self.company, include_advance=True
+        )
         liability_account = accounts[1] if len(accounts) > 1 else None
 
         fieldname = (
@@ -551,22 +638,21 @@ class CustomPaymentEntry(BasePaymentEntry):
             frappe.throw(
                 _("Please set default {0} in Company {1}").format(
                     frappe.bold(frappe.get_meta("Company").get_label(fieldname)),
-                    frappe.bold(self.company)
+                    frappe.bold(self.company),
                 )
             )
 
+        # Keep old account for user message
+        old_account = self.party_account
         self.set(self.party_account_field, liability_account)
 
         frappe.msgprint(
             _(
                 "Book Advance Payments as Liability option is chosen. "
-                "Paid From account changed from {0} to {1}."
+                "Party account changed from {0} to {1}."
             ).format(
-                frappe.bold(self.party_account),
+                frappe.bold(old_account),
                 frappe.bold(liability_account),
             ),
             alert=True,
         )
-
-
-

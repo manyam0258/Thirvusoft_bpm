@@ -101,7 +101,10 @@ after_migrate = "thirvusoft_bpm.thirvusoft_bpm.custom.py.customisation.payment_e
 override_doctype_class = {
 	"Payment Gateway Account": "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_gateway_account.Autoname",
     "Program Enrollment Tool": "thirvusoft_bpm.thirvusoft_bpm.custom.py.program_enrollment.CustomEnrollment",
-	"Payment Entry": "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.CustomPayment",
+	"Payment Entry":{
+    	"thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.CustomPayment",
+    	"thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.CustomPaymentEntry"
+	},
 	'Payment Request': "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_request.CustomPaymentRequest",
 	"Student" : "thirvusoft_bpm.thirvusoft_bpm.custom.py.student.CustomStudent"
 
@@ -258,14 +261,7 @@ app_include_js = [
 override_doctype_class = {
     "Payment Entry": "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.CustomPaymentEntry"
 }
-from erpnext.accounts.doctype.payment_entry import payment_entry
-from thirvusoft_bpm.thirvusoft_bpm.custom.py import payment_entry as custom_payment_entry
 
-def override_payment_entry_methods():
-    payment_entry.PaymentEntry.get_valid_reference_doctypes = custom_payment_entry.custom_get_valid_reference_doctypes
-
-# run override when app starts
-override_payment_entry_methods()
 
 
 
