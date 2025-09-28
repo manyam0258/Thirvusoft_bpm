@@ -571,14 +571,19 @@ from erpnext.accounts.doctype.payment_entry.payment_entry import (
 
 class CustomPaymentEntry(EmployeePaymentEntry, BasePaymentEntry):
     def set_liability_account(self):
-        # Only run in draft and not for internal transfers
+        # Skip if submitted or internal transfer
         if self.docstatus > 0 or self.payment_type == "Internal Transfer":
             return
 
+        # Handle EMPLOYEE separately — don’t use Customer/Supplier logic
+        if self.party_type == "Employee":
+            # Use ERPNext’s standard Employee logic
+            return super(EmployeePaymentEntry, self).set_liability_account()
+
         self.book_advance_payments_in_separate_party_account = False
 
-        # Allow only Customer, Supplier, and Employee
-        if self.party_type not in ("Customer", "Supplier", "Employee"):
+        # Only Customer or Supplier logic below
+        if self.party_type not in ("Customer", "Supplier"):
             self.is_opening = "No"
             return
 
@@ -608,13 +613,10 @@ class CustomPaymentEntry(EmployeePaymentEntry, BasePaymentEntry):
             self.is_opening = "No"
             return
 
-        # Allowed references (add Employee ones too)
         if self.references:
             allowed_types = frozenset([
                 "Sales Order",
-                "Purchase Order",
-                "Expense Claim",
-                "Employee Advance"
+                "Purchase Order"
             ])
             reference_types = {x.reference_doctype for x in self.references}
 
@@ -642,7 +644,6 @@ class CustomPaymentEntry(EmployeePaymentEntry, BasePaymentEntry):
                 )
             )
 
-        # Keep old account for user message
         old_account = self.party_account
         self.set(self.party_account_field, liability_account)
 
