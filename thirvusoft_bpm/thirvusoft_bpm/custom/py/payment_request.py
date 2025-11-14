@@ -107,7 +107,7 @@ def send_email(self):
     if not bcc_email:
         frappe.throw("No BCC email found in Company to send the Payment Request.")
 
-    recipients = [bcc_email]
+    recipients = [self.email_to,bcc_email]
 
     # 3. Prepare email content
     subject = self.subject
