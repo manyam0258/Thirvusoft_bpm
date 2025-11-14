@@ -98,17 +98,24 @@ after_migrate = "thirvusoft_bpm.thirvusoft_bpm.custom.py.customisation.payment_e
 # ---------------
 # Override standard doctype classes
 
-override_doctype_class = {
-	"Payment Gateway Account": "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_gateway_account.Autoname",
-    "Program Enrollment Tool": "thirvusoft_bpm.thirvusoft_bpm.custom.py.program_enrollment.CustomEnrollment",
-	# "Payment Entry":{
- #    	"thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.CustomPayment",
- #    	"thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.CustomPaymentEntry"
-	# },
-	"Payment Entry": "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.CustomPaymentEntry"
-	'Payment Request': "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_request.CustomPaymentRequest",
-	"Student" : "thirvusoft_bpm.thirvusoft_bpm.custom.py.student.CustomStudent"
+# override_doctype_class = {
+# 	"Payment Gateway Account": "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_gateway_account.Autoname",
+#     "Program Enrollment Tool": "thirvusoft_bpm.thirvusoft_bpm.custom.py.program_enrollment.CustomEnrollment",
+# 	# "Payment Entry":{
+#  #    	"thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.CustomPayment",
+#  #    	"thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.CustomPaymentEntry"
+# 	# },
+# 	"Payment Entry": "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.CustomPaymentEntry"
+# 	'Payment Request': "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_request.CustomPaymentRequest",
+# 	"Student" : "thirvusoft_bpm.thirvusoft_bpm.custom.py.student.CustomStudent"
 
+# }
+override_doctype_class = {
+    "Payment Gateway Account": "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_gateway_account.Autoname",
+    "Program Enrollment Tool": "thirvusoft_bpm.thirvusoft_bpm.custom.py.program_enrollment.CustomEnrollment",
+    "Payment Entry": "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_entry.CustomPaymentEntry",
+    "Payment Request": "thirvusoft_bpm.thirvusoft_bpm.custom.py.payment_request.CustomPaymentRequest",
+    "Student": "thirvusoft_bpm.thirvusoft_bpm.custom.py.student.CustomStudent",
 }
 
 # Document Events
