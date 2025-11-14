@@ -479,12 +479,76 @@ def get_outstanding_amount(account, party):
 
 
 
+# def set_advances(self, accounts):
+#     advances = get_advance_entries(self, accounts)
+
+#     # If no advances found for the selected accounts
+#     if not advances:
+#         frappe.throw(f"No advance payment found for the selected account(s): {', '.join(accounts)}")
+
+#     self.set("advances", [])
+#     advance_allocated = 0
+
+#     for d in advances:
+#         amount = self.get("base_rounded_total") or self.base_grand_total
+#         allocated_amount = min(amount - advance_allocated, d.amount)
+#         advance_allocated += flt(allocated_amount)
+
+#         advance_row = {
+#             "doctype": self.doctype + " Advance",
+#             "reference_type": d.reference_type,
+#             "reference_name": d.reference_name,
+#             "reference_row": d.reference_row,
+#             "remarks": d.remarks,
+#             "advance_amount": flt(d.amount),
+#             "allocated_amount": allocated_amount,
+#             "ref_exchange_rate": flt(d.exchange_rate),
+#             "account": d.get("paid_from") or d.get("paid_to"),
+#         }
+
+#         self.append("advances", advance_row)
+
+
+# def get_advance_entries(self, accounts):
+#     party_type = "Customer" if self.doctype == "Sales Invoice" else "Supplier"
+#     party = self.customer if self.doctype == "Sales Invoice" else self.supplier
+#     amount_field = "credit_in_account_currency" if self.doctype == "Sales Invoice" else "debit_in_account_currency"
+#     order_field = "sales_order" if self.doctype == "Sales Invoice" else "purchase_order"
+#     order_doctype = "Sales Order" if self.doctype == "Sales Invoice" else "Purchase Order"
+
+#     order_list = list(set(d.get(order_field) for d in self.get("items") if d.get(order_field)))
+
+#     all_advances = []
+
+#     # ✅ Loop through each selected account and check individually
+#     for acc in accounts:
+#         party_accounts = [acc]
+
+#         journal_entries = get_advance_journal_entries(
+#             party_type, party, party_accounts, amount_field, order_doctype, order_list, include_unallocated=True
+#         )
+
+#         payment_entries = get_advance_payment_entries_for_regional(
+#             party_type, party, party_accounts, order_doctype, order_list, include_unallocated=True
+#         )
+
+#         advances = journal_entries + payment_entries
+
+#         # ⚠️ Throw message if no advance for this specific account
+#         if not advances:
+#             frappe.throw(f"No advance payment found for the selected account: {acc}")
+
+#         all_advances.extend(advances)
+
+#     return all_advances
+
+
 def set_advances(self, accounts):
     advances = get_advance_entries(self, accounts)
 
-    # If no advances found for the selected accounts
+    # If no advance exists for this customer → skip allocation
     if not advances:
-        frappe.throw(f"No advance payment found for the selected account(s): {', '.join(accounts)}")
+        return
 
     self.set("advances", [])
     advance_allocated = 0
@@ -520,7 +584,7 @@ def get_advance_entries(self, accounts):
 
     all_advances = []
 
-    # ✅ Loop through each selected account and check individually
+    # Loop through selected accounts, but DO NOT THROW if no advance
     for acc in accounts:
         party_accounts = [acc]
 
@@ -534,9 +598,9 @@ def get_advance_entries(self, accounts):
 
         advances = journal_entries + payment_entries
 
-        # ⚠️ Throw message if no advance for this specific account
+        #  Skip silently if no advance for this account
         if not advances:
-            frappe.throw(f"No advance payment found for the selected account: {acc}")
+            continue
 
         all_advances.extend(advances)
 
