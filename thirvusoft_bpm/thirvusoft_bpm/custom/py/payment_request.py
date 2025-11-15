@@ -195,8 +195,8 @@ def send_email(self):
         self.payment_account = payment_account
         self.message = message or ""
 
-        # 5. Set payment gateway details
-        self.set_payment_gateway_details()
+        # # 5. Set payment gateway details
+        # self.set_payment_gateway_details()
 
 
 
