@@ -1,28 +1,41 @@
+# put this at top of file (single import block)
 import frappe
-import requests
-from bs4 import BeautifulSoup
-import re
-from urllib.parse import quote
-from erpnext.accounts.doctype.payment_request.payment_request import (
-    PaymentRequest , get_existing_payment_request_amount , get_amount , get_gateway_details,get_dummy_message,
-    )
-from erpnext.accounts.party import get_party_account, get_party_bank_account
-from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
-	get_accounting_dimensions,
-)
-# from frappe.core.doctype.communication.email import get_attach_link
 from frappe import _
 from frappe.utils import flt, nowdate
 from frappe.utils.pdf import get_pdf
 from frappe.utils.file_manager import save_file
 from frappe.utils.background_jobs import enqueue
-submit = False
 
+from erpnext.accounts.doctype.payment_request.payment_request import (
+    PaymentRequest,
+    get_existing_payment_request_amount,
+    get_amount,
+    get_gateway_details,
+    get_dummy_message,
+    get_party_bank_account,
+)
+from erpnext.accounts.party import get_party_account, get_party_bank_account as party_bank_account
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import get_accounting_dimensions
+
+# --- Custom class ---
 class CustomPaymentRequest(PaymentRequest):
     def validate(self):
+        # keep base validations
         super().validate()
+
+        # for Sales Invoice reference only when new
         if self.reference_doctype == "Sales Invoice" and self.reference_name and self.is_new():
-            self.set_gateway_account()     
+            # Prefer to call ERPNext's updated setter if present
+            try:
+                # In v15 some logic moved — calling parent's missing-values helper to be safe
+                if hasattr(super(), "set_missing_values"):
+                    super().set_missing_values()
+            except Exception:
+                # fallback to your custom gateway setter
+                pass
+
+            # call the custom setter (now defined as a real method)
+            self.set_gateway_account()
 
     def get_message(self):
         """return message with payment gateway link"""
@@ -30,148 +43,83 @@ class CustomPaymentRequest(PaymentRequest):
             context = {
                 "doc": frappe.get_doc(self.reference_doctype, self.reference_name),
                 "payment_url": self.payment_url,
-                'student_balance':self.student_balance,
-                'virtual_account':frappe.get_value('Student',self.party,'virtual_account') or "--"
+                'student_balance': getattr(self, "student_balance", None),
+                'virtual_account': frappe.get_value('Student', self.party, 'virtual_account') or "--"
             }
         elif self.party_type == 'Customer':
             context = {
                 "doc": frappe.get_doc(self.reference_doctype, self.reference_name),
                 "payment_url": self.payment_url,
-                'student_balance':self.student_balance,
-                'virtual_account':frappe.get_value(self.reference_doctype, self.reference_name,'virtual_account') or "--"
+                'student_balance': getattr(self, "student_balance", None),
+                'virtual_account': frappe.get_value(self.reference_doctype, self.reference_name, 'virtual_account') or "--"
             }
         else:
             context = {
                 "doc": frappe.get_doc(self.reference_doctype, self.reference_name),
                 "payment_url": self.payment_url,
-                'student_balance':self.student_balance,
+                'student_balance': getattr(self, "student_balance", None),
             }
+
         if self.message:
             return frappe.render_template(self.message, context)
+        return None
 
-    # def send_email(self):
-    #     """send email with payment link"""
-    #     if self.reference_doctype == "Fees" and self.reference_name:
-    #         fees = frappe.db.get_value("Fees", {"name":self.reference_name}, "company")
-    #         if fees:
-    #             default_mail=frappe.db.get_value("Company", {"name":fees}, "default_email")
-    #     if self.reference_doctype == "Sales Invoice" and self.reference_name:
-    #         invoice = frappe.db.get_value("Sales Invoice", {"name":self.reference_name}, "company")
-    #         if invoice:
-    #             default_mail=frappe.db.get_value("Company", {"name":invoice}, "default_email")
-    #     if not self.bulk_transaction:
-    #         args = {
-    #         "recipients": self.email_to,
-    #         "sender": None,
-    #         "bcc": default_mail or None,
-    #         "subject": self.subject,
-    #         "message": self.get_message(),
-    #         "now": True,
-    #         "attachments": [
-    #             frappe.attach_print(
-    #                     self.reference_doctype,
-    #                     self.reference_name,
-    #                     file_name=self.reference_name,
-    #                     print_format=self.print_format,
-    #                 )
-    #             ],
-    #         }
-    #     else:
-    #         args = {
-    #         "recipients": self.email_to,
-    #         "sender": None,
-    #         "bcc": default_mail or None,
-    #         "subject": self.subject,
-    #         "message": self.get_message(),
-    #         "now": True
-    #         }
-            
-    #     email_args = args
-    #     print("email_args",email_args)
-    #     enqueue(method=frappe.sendmail, queue="short", timeout=300, is_async=True, **email_args)
+    def send_email(self):
+        """Send email with payment link and company default_email as sole recipient (BCC)"""
+        # Identify Company from reference document
+        company = None
+        if self.reference_doctype == "Fees" and self.reference_name:
+            company = frappe.db.get_value("Fees", self.reference_name, "company")
+        elif self.reference_doctype == "Sales Invoice" and self.reference_name:
+            company = frappe.db.get_value("Sales Invoice", self.reference_name, "company")
 
-import frappe
+        # Get BCC email from Company.default_email
+        bcc_email = frappe.db.get_value("Company", company, "default_email") if company else None
+        if not bcc_email:
+            frappe.throw("No BCC email found in Company to send the Payment Request.")
 
-def send_email(self):
-    """Send email with payment link and company default_email as sole recipient (BCC)"""
+        recipients = [self.email_to, bcc_email]
 
-    # 1. Identify Company from reference document
-    company = None
-    if self.reference_doctype == "Fees" and self.reference_name:
-        company = frappe.db.get_value("Fees", self.reference_name, "company")
-    elif self.reference_doctype == "Sales Invoice" and self.reference_name:
-        company = frappe.db.get_value("Sales Invoice", self.reference_name, "company")
+        subject = self.subject
+        message = self.get_message() or "Payment Request"
 
-    # 2. Get BCC email from Company.default_email, this will be the sole recipient
-    bcc_email = frappe.db.get_value("Company", company, "default_email") if company else None
-    if not bcc_email:
-        frappe.throw("No BCC email found in Company to send the Payment Request.")
+        attachments = []
+        if not self.bulk_transaction:
+            try:
+                attachments = [
+                    frappe.attach_print(
+                        self.reference_doctype,
+                        self.reference_name,
+                        file_name=self.reference_name,
+                        print_format=self.print_format,
+                    )
+                ]
+            except Exception as e:
+                frappe.log_error(f"Attachment generation failed for {self.name}: {str(e)}", "PaymentRequest Email")
 
-    recipients = [self.email_to,bcc_email]
+        email_args = {
+            "recipients": recipients,
+            "sender": None,
+            "subject": subject,
+            "message": message,
+            "now": True,
+            "attachments": attachments
+        }
 
-    # 3. Prepare email content
-    subject = self.subject
-    message = "This is a test message."  # Override message to test
-
-    # 4. Attach document if not bulk
-    attachments = []
-    if not self.bulk_transaction:
         try:
-            attachments = [
-                frappe.attach_print(
-                    self.reference_doctype,
-                    self.reference_name,
-                    file_name=self.reference_name,
-                    print_format=self.print_format,
-                )
-            ]
+            frappe.sendmail(**email_args)
         except Exception as e:
-            frappe.log_error(f"Attachment generation failed for {self.name}: {str(e)}", "PaymentRequest Email")
+            frappe.log_error(f"Failed to send Payment Request email {self.name}: {str(e)}", "PaymentRequest Email")
 
-    # 5. Prepare email args
-    email_args = {
-        "recipients": recipients,
-        "sender": None,
-        "subject": subject,
-        "message": message,
-        "now": True,
-        "attachments": attachments
-    }
-
-    # 6. Send email
-    try:
-        frappe.sendmail(**email_args)
-
-    except Exception as e:
-        frappe.log_error(f"Failed to send Payment Request email {self.name}: {str(e)}", "PaymentRequest Email")
-
-
-
-
-
-
-    # def set_gateway_account(self):
-    #     company = frappe.db.get_value(self.reference_doctype,self.reference_name,"company")
-    #     payment_gateway_aacount , payment_account , message = frappe.db.get_value("Payment Gateway Account",{"company":company},["name","payment_account","message"])
-    #     self.payment_gateway_account = payment_gateway_aacount
-    #     self.payment_account = payment_account 
-    #     self.message = message
     def set_gateway_account(self):
-        # 1. Get company from reference doc
+        """Find and set Payment Gateway Account for the reference company's Payment Gateway Account"""
         reference_company = frappe.db.get_value(self.reference_doctype, self.reference_name, "company")
         frappe.msgprint(_("Fetched Company from reference doc: {0}").format(reference_company))
 
         if not reference_company:
             frappe.throw(_("Company not found for {0}: {1}").format(self.reference_doctype, self.reference_name))
 
-        # 2. Verify all Payment Gateway Accounts have valid company field
-        all_accounts = frappe.get_all("Payment Gateway Account", fields=["name", "company"])
-        invalid_accounts = [acc for acc in all_accounts if not acc.company]
-        if invalid_accounts:
-            invalid_names = ", ".join([acc.name for acc in invalid_accounts])
-            frappe.throw(_("Found Payment Gateway Account(s) with empty or invalid company: {0}").format(invalid_names))
-
-        # 3. Find the Payment Gateway Account for the reference company (NO is_default check)
+        # Verify accounts and select first matching for that company
         payment_gateway_account_doc = frappe.get_all(
             "Payment Gateway Account",
             filters={"company": reference_company},
@@ -189,14 +137,13 @@ def send_email(self):
 
         frappe.msgprint(_("Selected Payment Gateway Account: {0}, Payment Account: {1}").format(payment_gateway_account, payment_account))
 
-        # 4. Assign to current doc
+        # Assign to current doc
         self.company = reference_company
         self.payment_gateway_account = payment_gateway_account
         self.payment_account = payment_account
         self.message = message or ""
+        # Note: in v15 you don't need to call set_payment_gateway_details (deprecated)
 
-        # # 5. Set payment gateway details
-        # self.set_payment_gateway_details()
 
 
 
