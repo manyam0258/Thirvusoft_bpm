@@ -65,23 +65,56 @@ class CustomPaymentRequest(PaymentRequest):
         return None
 
     def send_email(self):
-        """Send email with payment link and company default_email as sole recipient (BCC)"""
-        # Identify Company from reference document
+        """Send Payment Request email with customer email + company default_email in BCC"""
+
+        # --------------------------
+        # 1️⃣ Identify Company
+        # --------------------------
         company = None
-        if self.reference_doctype == "Fees" and self.reference_name:
+
+        if self.reference_doctype == "Fees":
             company = frappe.db.get_value("Fees", self.reference_name, "company")
-        elif self.reference_doctype == "Sales Invoice" and self.reference_name:
+        elif self.reference_doctype == "Sales Invoice":
             company = frappe.db.get_value("Sales Invoice", self.reference_name, "company")
 
-        # Get BCC email from Company.default_email
-        bcc_email = frappe.db.get_value("Company", company, "default_email") if company else None
+        if not company:
+            frappe.throw("Company not found for Payment Request")
+
+        # --------------------------
+        # 2️⃣ Get Company BCC Email
+        # --------------------------
+        bcc_email = frappe.db.get_value("Company", company, "default_email")
+
         if not bcc_email:
-            frappe.throw("No BCC email found in Company to send the Payment Request.")
+            frappe.throw(f"DEFAULT EMAIL NOT SET in Company: {company}")
 
-        recipients = [self.email_to, bcc_email]
+        # --------------------------
+        # 3️⃣ Build RECIPIENT LIST
+        # --------------------------
+        recipient_list = []
 
+        if self.email_to:
+            for r in self.email_to.split(","):
+                if r.strip():
+                    recipient_list.append(r.strip())
+
+        # Add company finance email as BCC only (NOT as main recipient)
+        bcc_list = [bcc_email]
+
+        # -----------------------------------
+        # Remove duplicates / safety cleanup
+        # -----------------------------------
+        recipient_list = list(set(recipient_list))
+        bcc_list = list(set(bcc_list))
+
+        if not recipient_list:
+            frappe.throw("No valid customer email found in Payment Request")
+
+        # --------------------------
+        # 4️⃣ Build Email
+        # --------------------------
         subject = self.subject
-        message = self.get_message() or "Payment Request"
+        message = self.get_message()   # REAL MESSAGE, not test text
 
         attachments = []
         if not self.bulk_transaction:
@@ -95,21 +128,37 @@ class CustomPaymentRequest(PaymentRequest):
                     )
                 ]
             except Exception as e:
-                frappe.log_error(f"Attachment generation failed for {self.name}: {str(e)}", "PaymentRequest Email")
+                frappe.log_error(
+                    f"Attachment generation failed for {self.name}: {str(e)}",
+                    "PaymentRequest Email"
+                )
 
         email_args = {
-            "recipients": recipients,
-            "sender": None,
+            "recipients": recipient_list,
+            "bcc": bcc_list,
             "subject": subject,
             "message": message,
+            "attachments": attachments,
             "now": True,
-            "attachments": attachments
+            "reference_doctype": self.doctype,
+            "reference_name": self.name,
         }
 
+        # --------------------------
+        # 5️⃣ Send Email
+        # --------------------------
         try:
             frappe.sendmail(**email_args)
+            self.db_set("email_sent", 1)
+
         except Exception as e:
-            frappe.log_error(f"Failed to send Payment Request email {self.name}: {str(e)}", "PaymentRequest Email")
+            frappe.log_error(
+                f"FAILED to send Payment Request email {self.name}: {str(e)}",
+                "PaymentRequest Email"
+            )
+
+        frappe.db.commit()
+
 
     def set_gateway_account(self):
         """Find and set Payment Gateway Account for the reference company's Payment Gateway Account"""
