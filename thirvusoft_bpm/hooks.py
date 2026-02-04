@@ -257,9 +257,17 @@ user_data_fields = [
 
 fixtures = [
     {
-        "doctype": "Server Script",
+        "doctype": "Client Script",
+        "filters": [
+            [
+                "name",
+                "=",
+                "student creation"
+            ]
+        ]
     }
 ]
+
 
 app_include_js = [
     "/assets/thirvusoft_bpm/js/razorpay_checkout.js"

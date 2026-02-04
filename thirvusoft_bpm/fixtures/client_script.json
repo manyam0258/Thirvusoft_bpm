@@ -1,1 +1,13 @@
-[]
+[
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Student Applicant",
+  "enabled": 1,
+  "modified": "2026-02-04 20:07:02.900856",
+  "module": null,
+  "name": "student creation",
+  "script": "frappe.ui.form.on('Student Applicant', {\n    refresh: function (frm) {\n\n        frm.set_query('academic_term', function () {\n            return {\n                filters: {\n                    academic_year: frm.doc.academic_year\n                }\n            };\n        });\n\n        if (!frm.is_new() && frm.doc.application_status === 'Approved') {\n            frm.add_custom_button(__('Enroll'), function () {\n                frm.events.enroll(frm);\n            });\n        }\n    },\n\n    enroll: function (frm) {\n\n        frappe.route_options = {\n            student_applicant: frm.doc.name,\n            first_name: frm.doc.first_name,\n            last_name: frm.doc.last_name,\n            student_email_id: frm.doc.student_email_id,\n            student_mobile_number: frm.doc.student_mobile_number,\n            date_of_birth: frm.doc.date_of_birth,\n            gender: frm.doc.gender,\n            academic_year: frm.doc.academic_year,\n            program: frm.doc.program,\n            grade_joined: frm.doc.program,\n\n            // Address fields\n            address_line_1: frm.doc.address_line_1,\n            pincode: frm.doc.pincode\n        };\n\n        frappe.new_doc('Student');\n    }\n});\n",
+  "view": "Form"
+ }
+]
