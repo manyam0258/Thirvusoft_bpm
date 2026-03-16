@@ -298,11 +298,14 @@ def get_advance_entries(doc,event):
             doc.message = frappe.db.get_value('Payment Gateway Account',doc.payment_gateway_account,'default_message_for_bulk_payment_remainder')
 
 
-def background_submit(doc,event):
-    global submit
-    if not submit:
-        frappe.msgprint('Submission has been moved to Background.. Kindly check after some time..')
-        submit = True
+# def background_submit(doc,event):
+#     global submit
+#     if not submit:
+#         frappe.msgprint('Submission has been moved to Background.. Kindly check after some time..')
+#         submit = True
+#     frappe.enqueue(whatsapp_message, doc=doc, queue="long")
+def background_submit(doc, event):
+    frappe.msgprint("Submission has been moved to Background. Kindly check after some time.")
     frappe.enqueue(whatsapp_message, doc=doc, queue="long")
 
 
