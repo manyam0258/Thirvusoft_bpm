@@ -147,11 +147,21 @@ def create_payment_request(list_of_docs=None):
         doc = frappe.get_doc("Payment Request", pr_doc.name)
         doc.mode_of_payment = 'Gateway'
         doc.payment_request_type = 'Inward' 
-        doc.print_format = frappe.db.get_value(
-            "Property Setter",
-            dict(property="default_print_format", doc_type="Sales Invoice"),
-            "value",
-        )
+        customer = invoice_doc.customer
+
+        customer = invoice_doc.customer
+
+        discount_exists = frappe.db.exists("Discount", {"customer": customer})
+
+        if discount_exists:
+            doc.print_format = "TFEE-MKRE-DISC"
+        else:
+            doc.print_format = "TFEE-MKRE"
+        # doc.print_format = frappe.db.get_value(
+        #     "Property Setter",
+        #     dict(property="default_print_format", doc_type="Sales Invoice"),
+        #     "value",
+        # )
 
         # Use exact custom_net_payable as grand_total
         doc.grand_total = grand_total

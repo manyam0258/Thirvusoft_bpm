@@ -4509,8 +4509,7 @@
    "parenttype": null,
    "property": "default_print_format",
    "property_type": "Data",
-   "row_name": null,
-   "value": "Test-FEE-MKRE"
+   "row_name": null
   },
   {
    "_assign": null,
