@@ -149,8 +149,6 @@ def create_payment_request(list_of_docs=None):
         doc.payment_request_type = 'Inward' 
         customer = invoice_doc.customer
 
-        customer = invoice_doc.customer
-
         discount_exists = frappe.db.exists("Discount", {"customer": customer})
 
         #if discount_exists:
