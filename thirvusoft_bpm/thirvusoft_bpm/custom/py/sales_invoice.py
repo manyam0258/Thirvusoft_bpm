@@ -153,10 +153,29 @@ def create_payment_request(list_of_docs=None):
 
         discount_exists = frappe.db.exists("Discount", {"customer": customer})
 
-        if discount_exists:
-            doc.print_format = "TFEE-MKRE-DISC"
+        #if discount_exists:
+         #   doc.print_format = "TFEE-MKRE-DISC"
+        #else:
+         #   doc.print_format = "TFEE-MKRE"
+                # Check for Discount and Installment Type
+        installment_type = invoice_doc.get("installment_type") or ""
+
+        if "Full Year" in installment_type:
+            if discount_exists:
+                doc.print_format = "DISC-FEE-PD-FY"
+            else:
+                doc.print_format = "FY-FEE-PD"
+        
+        elif any(x in installment_type for x in ["Installment I", "Installment II", "Installment III"]):
+            if discount_exists:
+                doc.print_format = "TM-FEE-DISC-PD"
+            else:
+                doc.print_format = "TermFee"
+        
         else:
-            doc.print_format = "TFEE-MKRE"
+            # Fallback to a default if no conditions are met
+            doc.print_format = "TermFee"
+
         # doc.print_format = frappe.db.get_value(
         #     "Property Setter",
         #     dict(property="default_print_format", doc_type="Sales Invoice"),
