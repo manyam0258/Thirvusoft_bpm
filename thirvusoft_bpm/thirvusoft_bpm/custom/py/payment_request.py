@@ -14,7 +14,7 @@ from erpnext.accounts.doctype.payment_request.payment_request import (
     get_dummy_message,
     get_party_bank_account,
 )
-from erpnext.accounts.party import get_party_account, get_party_bank_account as party_bank_account
+#from erpnext.accounts.party import get_party_account, get_party_bank_account as party_bank_account
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import get_accounting_dimensions
 
 # --- Custom class ---
